@@ -21,7 +21,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Key, Globe, Users, Radio, MessageSquare, Ghost, UserX } from "lucide-react";
+import { Key, Globe, Users, Radio, MessageSquare, Ghost, UserX, Hash } from "lucide-react";
 
 interface SettingsSheetProps {
   open: boolean;
@@ -169,6 +169,30 @@ export function SettingsSheet({
                 {settings.kickChannelName || "kanal-adi"}
               </span>{" "}
               adresindeki kanalınızın slug adı.
+            </p>
+          </div>
+
+          <Separator />
+
+          {/* Manual Chatroom ID */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Hash className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="manual-chatroom-id" className="text-sm font-medium">
+                Manuel Chatroom ID (Opsiyonel)
+              </Label>
+            </div>
+            <Input
+              id="manual-chatroom-id"
+              placeholder="Örn: 1234567"
+              value={settings.manualChatroomId}
+              onChange={(e) =>
+                onUpdateSettings({ manualChatroomId: e.target.value.replace(/[^0-9]/g, "") })
+              }
+              className="text-sm"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Vercel'de "Could not resolve chatroom" hatası alıyorsanız buraya ID'nizi elle girin. ID'nizi bulmak için tarayıcıda kanalınızdayken <code className="bg-muted px-1 rounded text-[10px]">CTRL+U</code> yapıp "chatroom_id" diye aratabilirsiniz.
             </p>
           </div>
 

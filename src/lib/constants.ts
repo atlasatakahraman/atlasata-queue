@@ -9,6 +9,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   queueCommand: "!sıra",
   afkCommand: "!afk",
   disableRiotApi: false,
+  manualChatroomId: "",
 };
 
 export const KICK_WS_URL = "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=7.6.0&flash=false";

@@ -248,6 +248,7 @@ export function Dashboard() {
     afkCommand: settings.afkCommand,
     onAfkCommand: handleAfkCommand,
     disableRiotApi: settings.disableRiotApi,
+    initialChatroomId: settings.manualChatroomId ? parseInt(settings.manualChatroomId) : (status === "authenticated" ? (session?.user as any)?.chatroomId : null),
   });
 
   const executeRandomize = useCallback((onlyInGame: boolean) => {

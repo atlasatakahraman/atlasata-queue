@@ -96,6 +96,7 @@ export interface AppSettings {
   queueCommand: string;
   afkCommand: string;
   disableRiotApi?: boolean;
+  manualChatroomId?: string;
 }
 
 export interface KickChatMessage {

@@ -47,12 +47,14 @@ const kickProvider = {
     },
   },
   profile(profile: Record<string, unknown>) {
+    // The main ID in Kick API response is often the chatroom_id as well
+    const mainId = profile.user_id ?? profile.id ?? null;
     return {
-      id: String(profile.user_id ?? profile.id ?? ""),
+      id: String(mainId ?? ""),
       name: profile.name as string | null,
       email: profile.email as string | null,
       image: profile.profile_picture as string | null,
-      chatroomId: (profile.chatroom as any)?.id ?? null,
+      chatroomId: (profile.chatroom as any)?.id ?? (mainId ? String(mainId) : null),
     };
   },
   checks: ["pkce", "state"] as ("pkce" | "state" | "none")[],
