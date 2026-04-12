@@ -55,31 +55,40 @@ export async function getKickChatroomId(
  * This is a high-reliability fallback for when the API is blocked.
  */
 export async function scrapeKickChatroomId(slug: string): Promise<number | null> {
-  try {
-    // We use allorigins as a public CORS proxy to fetch the HTML of the channel page
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://kick.com/${slug}`)}`;
-    const res = await fetch(proxyUrl);
-    if (!res.ok) return null;
-    
-    const data = await res.json();
-    const html = data.contents;
-    
-    if (!html) return null;
+  const proxies = [
+    (s: string) => `https://api.allorigins.win/get?url=${encodeURIComponent(`https://kick.com/${s}`)}`,
+    (s: string) => `https://corsproxy.io/?${encodeURIComponent(`https://kick.com/${s}`)}`,
+    (s: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://kick.com/${s}`)}`
+  ];
 
-    // Look for chatroom_id in the HTML (it's often in several places, but __NEXT_DATA__ is reliable)
-    const match = html.match(/\"chatroom_id\":(\d+)/) || html.match(/\"chatroom\":\{\"id\":(\d+)/);
-    
-    if (match && match[1]) {
-      const id = parseInt(match[1]);
-      logger.log(`[Kick Chat] Scraper found chatroom ID: ${id}`);
-      return id;
+  for (const getProxyUrl of proxies) {
+    try {
+      const url = getProxyUrl(slug);
+      logger.log(`[Kick Chat] [Scraper] Trying proxy: ${url}`);
+      
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      
+      const responseData = await res.json();
+      // allorigins puts content in 'contents', others might return the raw HTML string
+      const html = typeof responseData === 'string' ? responseData : (responseData.contents || responseData.data);
+      
+      if (!html || typeof html !== 'string') continue;
+
+      const match = html.match(/\"chatroom_id\":(\d+)/) || html.match(/\"chatroom\":\{\"id\":(\d+)/);
+      
+      if (match && match[1]) {
+        const id = parseInt(match[1]);
+        logger.log(`[Kick Chat] [Scraper] Successfully found ID: ${id}`);
+        return id;
+      }
+    } catch (err) {
+      logger.warn(`[Kick Chat] [Scraper] Proxy attempt failed:`, err);
     }
-
-    return null;
-  } catch (err) {
-    logger.error("[Kick Chat] Scraper failed:", err);
-    return null;
   }
+
+  logger.error("[Kick Chat] [Scraper] All proxies failed to resolve chatroom ID.");
+  return null;
 }
 
 export function connectToKickChat(
