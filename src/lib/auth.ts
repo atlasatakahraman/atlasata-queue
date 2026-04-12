@@ -44,19 +44,32 @@ const kickProvider = {
       // 2. Also fetch channel data to get chatroom_id as fallback
       if (userData.name) {
         try {
-          const channelRes = await fetch(`https://api.kick.com/public/v1/channels/${userData.name}`, {
-            headers: {
-              Authorization: `Bearer ${tokens.access_token}`,
-              Accept: "application/json",
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            },
-          });
-          const channelJson = await channelRes.json();
-          const channelData = Array.isArray(channelJson.data) ? channelJson.data[0] : (channelJson.data || channelJson);
-          
-          if (channelData && channelData.chatroom) {
-            userData.chatroom = channelData.chatroom;
-            userData.channel_id = channelData.id;
+          // Try multiple official endpoints that are covered by our 'channel:read' scope
+          const endpoints = [
+            `https://api.kick.com/public/v1/channels/${userData.name}`,
+            `https://api.kick.com/public/v1/users/${userData.id}` // Sometimes info is here too
+          ];
+
+          for (const endpoint of endpoints) {
+            const channelRes = await fetch(endpoint, {
+              headers: {
+                Authorization: `Bearer ${tokens.access_token}`,
+                Accept: "application/json",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+              },
+            });
+            
+            if (channelRes.ok) {
+              const channelJson = await channelRes.json();
+              const channelData = Array.isArray(channelJson.data) ? channelJson.data[0] : (channelJson.data || channelJson);
+              
+              if (channelData && (channelData.chatroom || channelData.chatroom_id)) {
+                userData.chatroom = channelData.chatroom || { id: channelData.chatroom_id };
+                userData.channel_id = channelData.id;
+                userData.chatroom_id = channelData.chatroom?.id || channelData.chatroom_id;
+                break; // Found it!
+              }
+            }
           }
         } catch (e) {
           console.error("Failed to fetch channel info during login", e);
@@ -68,10 +81,11 @@ const kickProvider = {
   },
   profile(profile: Record<string, unknown>) {
     const mainId = profile.user_id ?? profile.id ?? null;
-    // VERY IMPORTANT: Do NOT fallback to mainId for chatroomId. 
-    // They are often different (e.g., 66726110 vs 65286905)
-    // Only set chatroomId if we found an actual chatroom object or field.
-    const resolvedChatroomId = (profile.chatroom as any)?.id ?? (profile.chatroom_id ? String(profile.chatroom_id) : null);
+    // Check multiple potential fields for chatroom ID
+    const resolvedChatroomId = (profile.chatroom as any)?.id ?? 
+                               profile.chatroom_id ?? 
+                               (profile.chatroom as any)?.chatroom_id ?? 
+                               null;
 
     return {
       id: String(mainId ?? ""),
