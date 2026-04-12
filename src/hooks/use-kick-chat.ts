@@ -99,14 +99,28 @@ export function useKickChat({
       const qCommand = queueCommandRef.current.toLowerCase();
       const aCommand = afkCommandRef.current.toLowerCase();
 
+      logger.log(`[Kick Chat] [Debug] Incoming message from ${event.sender.username}: "${content}"`);
+      logger.log(`[Kick Chat] [Debug] Checking against command: "${qCommand}"`);
+
       if (aCommand && content.toLowerCase() === aCommand) {
+        logger.log(`[Kick Chat] [Debug] AFK Command matched!`);
         onAfkCommandRef.current(event.sender.username);
         return;
       }
 
-      if (!content.toLowerCase().startsWith(qCommand)) return;
+      // Locale-insensitive check for Turkish "ı" issue
+      const normalizedContent = content.toLowerCase().replace(/ı/g, 'i');
+      const normalizedCommand = qCommand.replace(/ı/g, 'i');
+
+      if (!normalizedContent.startsWith(normalizedCommand)) {
+        logger.log(`[Kick Chat] [Debug] Command prefix did not match.`);
+        return;
+      }
+
+      logger.log(`[Kick Chat] [Debug] Command prefix matched. Parsing argument...`);
 
       if (disableRiotApiRef.current) {
+        logger.log(`[Kick Chat] [Debug] Riot API disabled, adding as generic player.`);
         if (isDuplicateRef.current(event.sender.username, "KICK")) {
           onDuplicateAttemptRef.current(event.sender.username, event.sender.username);
           return;
@@ -116,13 +130,21 @@ export function useKickChat({
       }
 
       const argument = content.substring(qCommand.length).trim();
+      logger.log(`[Kick Chat] [Debug] Argument: "${argument}"`);
 
-      if (!argument) return;
+      if (!argument) {
+        logger.warn(`[Kick Chat] [Debug] Empty argument for command.`);
+        return;
+      }
 
       const parsed = parseRiotId(argument);
-      if (!parsed) return;
+      if (!parsed) {
+        logger.warn(`[Kick Chat] [Debug] Failed to parse Riot ID from: "${argument}"`);
+        return;
+      }
 
       const { gameName, tagLine } = parsed;
+      logger.log(`[Kick Chat] [Debug] Parsed Riot ID: ${gameName}#${tagLine}`);
 
       if (isDuplicateRef.current(gameName, tagLine)) {
         onDuplicateAttemptRef.current(

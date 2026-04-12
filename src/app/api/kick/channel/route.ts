@@ -10,7 +10,7 @@ import { logger } from "@/lib/utils";
  */
 export async function GET(request: NextRequest) {
   const slug = request.nextUrl.searchParams.get("slug");
-  
+
   if (!slug) {
     return Response.json({ error: "Kanal adı gerekli" }, { status: 400 });
   }
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   try {
     // Try v1 API first as it's often more stable on serverless environments
     let data = await fetchChannelData(slug, "v1");
-    
+
     // If v1 fails, try v2
     if (!data) {
       data = await fetchChannelData(slug, "v2");
