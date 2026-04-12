@@ -23,6 +23,7 @@ interface UseKickChatOptions {
   onAfkCommand: (kickUsername: string) => void;
   disableRiotApi?: boolean;
   initialChatroomId?: number | null;
+  onChatroomResolved?: (id: number) => void;
 }
 
 export function useKickChat({
@@ -37,6 +38,7 @@ export function useKickChat({
   onAfkCommand,
   disableRiotApi,
   initialChatroomId = null,
+  onChatroomResolved,
 }: UseKickChatOptions) {
   const [isConnected, setIsConnected] = useState(false);
   const [chatroomId, setChatroomId] = useState<number | null>(initialChatroomId);
@@ -76,7 +78,8 @@ export function useKickChat({
       if (!cancelled) {
         setChatroomId(id);
         if (id) {
-          logger.log(`[Kick Chat] [Debug] Chatroom resolved via API: ${id} for ${channelSlug}`);
+          logger.log(`[Kick Chat] [Debug] Chatroom resolved: ${id} for ${channelSlug}`);
+          onChatroomResolved?.(id);
           toast.success("Kick Sohbet", {
             description: `${channelSlug} kanalına bağlanıyor...`,
           });

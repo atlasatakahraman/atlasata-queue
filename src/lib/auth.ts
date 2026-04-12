@@ -51,9 +51,11 @@ const kickProvider = {
             },
           });
           const channelJson = await channelRes.json();
-          if (channelJson.data) {
-            userData.chatroom = channelJson.data.chatroom;
-            userData.channel_id = channelJson.data.id;
+          const channelData = Array.isArray(channelJson.data) ? channelJson.data[0] : (channelJson.data || channelJson);
+          
+          if (channelData && channelData.chatroom) {
+            userData.chatroom = channelData.chatroom;
+            userData.channel_id = channelData.id;
           }
         } catch (e) {
           console.error("Failed to fetch channel info during login", e);
@@ -64,14 +66,18 @@ const kickProvider = {
     },
   },
   profile(profile: Record<string, unknown>) {
-    // The main ID in Kick API response is often the chatroom_id as well
     const mainId = profile.user_id ?? profile.id ?? null;
+    // VERY IMPORTANT: Do NOT fallback to mainId for chatroomId. 
+    // They are often different (e.g., 66726110 vs 65286905)
+    // Only set chatroomId if we found an actual chatroom object or field.
+    const resolvedChatroomId = (profile.chatroom as any)?.id ?? (profile.chatroom_id ? String(profile.chatroom_id) : null);
+
     return {
       id: String(mainId ?? ""),
       name: profile.name as string | null,
       email: profile.email as string | null,
       image: profile.profile_picture as string | null,
-      chatroomId: (profile.chatroom as any)?.id ?? (mainId ? String(mainId) : null),
+      chatroomId: resolvedChatroomId ? String(resolvedChatroomId) : null,
     };
   },
   checks: ["pkce", "state"] as ("pkce" | "state" | "none")[],

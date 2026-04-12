@@ -259,6 +259,12 @@ export function Dashboard() {
     onAfkCommand: handleAfkCommand,
     disableRiotApi: settings.disableRiotApi,
     initialChatroomId: settings.manualChatroomId ? parseInt(settings.manualChatroomId) : (status === "authenticated" ? (session?.user as any)?.chatroomId : null),
+    onChatroomResolved: (id) => {
+      if (!settings.manualChatroomId) {
+        updateSettings({ manualChatroomId: String(id) });
+        logger.log("[Dashboard] Auto-saved discovered chatroom ID:", id);
+      }
+    },
   });
 
   const executeRandomize = useCallback((onlyInGame: boolean) => {

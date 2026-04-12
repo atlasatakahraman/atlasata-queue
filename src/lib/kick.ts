@@ -35,10 +35,49 @@ export async function getKickChatroomId(
     const params = new URLSearchParams({ slug: channelSlug });
     if (accessToken) params.set("token", accessToken);
     const res = await fetch(`/api/kick/channel?${params.toString()}`);
+    
+    if (res.ok) {
+      const data = await res.json();
+      if (data.chatroomId) return data.chatroomId;
+    }
+
+    // Fallback: If API fails (likely 403 on Vercel), try client-side scraper
+    logger.log("[Kick Chat] API resolution failed or returned no ID, triggering client-side scraper...");
+    return await scrapeKickChatroomId(channelSlug);
+  } catch (err) {
+    logger.error("[Kick Chat] Error resolving chatroom ID:", err);
+    return null;
+  }
+}
+
+/**
+ * Scrapes the chatroom ID from the Kick channel page using a CORS proxy.
+ * This is a high-reliability fallback for when the API is blocked.
+ */
+export async function scrapeKickChatroomId(slug: string): Promise<number | null> {
+  try {
+    // We use allorigins as a public CORS proxy to fetch the HTML of the channel page
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://kick.com/${slug}`)}`;
+    const res = await fetch(proxyUrl);
     if (!res.ok) return null;
+    
     const data = await res.json();
-    return data.chatroomId ?? null;
-  } catch {
+    const html = data.contents;
+    
+    if (!html) return null;
+
+    // Look for chatroom_id in the HTML (it's often in several places, but __NEXT_DATA__ is reliable)
+    const match = html.match(/\"chatroom_id\":(\d+)/) || html.match(/\"chatroom\":\{\"id\":(\d+)/);
+    
+    if (match && match[1]) {
+      const id = parseInt(match[1]);
+      logger.log(`[Kick Chat] Scraper found chatroom ID: ${id}`);
+      return id;
+    }
+
+    return null;
+  } catch (err) {
+    logger.error("[Kick Chat] Scraper failed:", err);
     return null;
   }
 }
