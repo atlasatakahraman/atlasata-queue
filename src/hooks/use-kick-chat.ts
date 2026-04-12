@@ -24,6 +24,7 @@ interface UseKickChatOptions {
   disableRiotApi?: boolean;
   initialChatroomId?: number | null;
   onChatroomResolved?: (id: number) => void;
+  onResolutionFail?: () => void;
 }
 
 export function useKickChat({
@@ -39,6 +40,7 @@ export function useKickChat({
   disableRiotApi,
   initialChatroomId = null,
   onChatroomResolved,
+  onResolutionFail,
 }: UseKickChatOptions) {
   const [isConnected, setIsConnected] = useState(false);
   const [chatroomId, setChatroomId] = useState<number | null>(initialChatroomId);
@@ -85,6 +87,7 @@ export function useKickChat({
           });
         } else {
           logger.error(`[Kick Chat] [Debug] FAILED to resolve chatroom for ${channelSlug}. Please enter ID manually in Settings.`);
+          onResolutionFail?.();
         }
       }
     });
