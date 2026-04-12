@@ -1,8 +1,5 @@
 /**
  * Kick.com chat WebSocket utilities.
- *
- * Kick uses Pusher protocol for chat. We connect to their public WebSocket
- * and subscribe to the chatroom channel to receive messages.
  */
 
 import { KICK_WS_URL } from "./constants";
@@ -27,6 +24,9 @@ export interface KickChatEvent {
 
 export type KickChatHandler = (event: KickChatEvent) => void;
 
+/**
+ * Resolves the chatroom ID via our simplified backend API.
+ */
 export async function getKickChatroomId(
   channelSlug: string,
   accessToken?: string
@@ -34,61 +34,16 @@ export async function getKickChatroomId(
   try {
     const params = new URLSearchParams({ slug: channelSlug });
     if (accessToken) params.set("token", accessToken);
-    const res = await fetch(`/api/kick/channel?${params.toString()}`);
     
-    if (res.ok) {
-      const data = await res.json();
-      if (data.chatroomId) return data.chatroomId;
-    }
-
-    // Fallback: If API fails (likely 403 on Vercel), try client-side scraper
-    logger.log("[Kick Chat] API resolution failed or returned no ID, triggering client-side scraper...");
-    return await scrapeKickChatroomId(channelSlug);
+    const res = await fetch(`/api/kick/channel?${params.toString()}`);
+    if (!res.ok) return null;
+    
+    const data = await res.json();
+    return data.chatroomId ?? null;
   } catch (err) {
-    logger.error("[Kick Chat] Error resolving chatroom ID:", err);
+    logger.error("[Kick Chat] ID resolution error:", err);
     return null;
   }
-}
-
-/**
- * Scrapes the chatroom ID from the Kick channel page using a CORS proxy.
- * This is a high-reliability fallback for when the API is blocked.
- */
-export async function scrapeKickChatroomId(slug: string): Promise<number | null> {
-  const proxies = [
-    (s: string) => `https://api.allorigins.win/get?url=${encodeURIComponent(`https://kick.com/${s}`)}`,
-    (s: string) => `https://corsproxy.io/?${encodeURIComponent(`https://kick.com/${s}`)}`,
-    (s: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://kick.com/${s}`)}`
-  ];
-
-  for (const getProxyUrl of proxies) {
-    try {
-      const url = getProxyUrl(slug);
-      logger.log(`[Kick Chat] [Scraper] Trying proxy: ${url}`);
-      
-      const res = await fetch(url);
-      if (!res.ok) continue;
-      
-      const responseData = await res.json();
-      // allorigins puts content in 'contents', others might return the raw HTML string
-      const html = typeof responseData === 'string' ? responseData : (responseData.contents || responseData.data);
-      
-      if (!html || typeof html !== 'string') continue;
-
-      const match = html.match(/\"chatroom_id\":(\d+)/) || html.match(/\"chatroom\":\{\"id\":(\d+)/);
-      
-      if (match && match[1]) {
-        const id = parseInt(match[1]);
-        logger.log(`[Kick Chat] [Scraper] Successfully found ID: ${id}`);
-        return id;
-      }
-    } catch (err) {
-      logger.warn(`[Kick Chat] [Scraper] Proxy attempt failed:`, err);
-    }
-  }
-
-  logger.error("[Kick Chat] [Scraper] All proxies failed to resolve chatroom ID.");
-  return null;
 }
 
 export function connectToKickChat(
@@ -107,7 +62,6 @@ export function connectToKickChat(
 
     ws.onopen = () => {
       onStatusChange?.(true);
-
       const subscribePayload = JSON.stringify({
         event: "pusher:subscribe",
         data: {
@@ -122,7 +76,6 @@ export function connectToKickChat(
       try {
         const data = JSON.parse(event.data);
         
-        // Log basic info for EVERY event to find the right one
         if (data.event !== "pusher:ping" && data.event !== "pusher:pong") {
           logger.log("[Kick WS Raw Event]", data.event, data);
         }

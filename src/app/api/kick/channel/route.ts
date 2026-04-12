@@ -1,81 +1,54 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/utils";
 
 /**
  * GET /api/kick/channel?slug=channelName
  * 
- * Resolves the Kick chatroom ID and live status.
- * Uses standard fetch with optimized headers to bypass basic Cloudflare checks
- * on Vercel environments.
+ * Saf HTML üzerinden Chatroom ID çözümleyici.
+ * Vercel'in Kick sayfa gövdesine erişip erişemediğini test eder.
  */
 export async function GET(request: NextRequest) {
   const slug = request.nextUrl.searchParams.get("slug");
 
   if (!slug) {
-    return Response.json({ error: "Kanal adı gerekli" }, { status: 400 });
+    return NextResponse.json({ error: "Slug gerekli" }, { status: 400 });
   }
 
   try {
-    // Try v1 API first as it's often more stable on serverless environments
-    let data = await fetchChannelData(slug, "v1");
-
-    // If v1 fails, try v2
-    if (!data) {
-      data = await fetchChannelData(slug, "v2");
-    }
-
-    if (data) {
-      const chatroomId = data.chatroom?.id ?? data.id ?? null;
-      const isLive = data.livestream !== null && data.livestream !== undefined;
-      const streamTitle = data.livestream?.session_title ?? data.livestream?.title ?? null;
-      const actualSlug = data.slug ?? slug;
-
-      logger.log(
-        `[Kick Channel] Resolved ${slug}: chatroom=${chatroomId}, live=${isLive}`
-      );
-
-      return Response.json({
-        chatroomId,
-        slug: actualSlug,
-        isLive,
-        streamTitle,
-      });
-    }
-
-    logger.warn(`[Kick Channel] Could not resolve chatroom for ${slug} after trying multiple APIs`);
-    return Response.json({ error: "Kanal bulunamadı veya koruma engeline takıldı" }, { status: 404 });
-  } catch (err) {
-    logger.error("[Kick Channel API Error]", err);
-    return Response.json({ error: "Kick API hatası" }, { status: 500 });
-  }
-}
-
-async function fetchChannelData(slug: string, version: "v1" | "v2") {
-  const safeSlug = slug.replace(/[^a-zA-Z0-9_-]/g, "");
-  const url = `https://kick.com/api/${version}/channels/${safeSlug}`;
-
-  try {
-    const res = await fetch(url, {
-      method: "GET",
+    // Doğrudan kanal sayfasını (HTML) çekmeyi dene
+    const res = await fetch(`https://kick.com/${slug}`, {
       headers: {
-        "Accept": "application/json",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache"
+        "Accept": "text/html",
+        "Cache-Control": "no-cache"
       },
-      next: { revalidate: 60 } // Cache for 1 minute on Vercel
+      next: { revalidate: 60 }
     });
 
     if (!res.ok) {
-      if (res.status === 403 || res.status === 429) {
-        logger.warn(`[Kick Channel] ${version} API blocked (CF/RateLimit) for ${slug}`);
-      }
-      return null;
+      logger.error(`[Kick API Test] Fetch başarısız: ${res.status} ${res.statusText}`);
+      return NextResponse.json({ error: "Sayfa çekilemedi" }, { status: res.status });
     }
 
-    return await res.json();
-  } catch (err) {
-    logger.warn(`[Kick Channel] ${version} fetch failed for ${slug}:`, err);
-    return null;
+    const html = await res.text();
+    
+    // HTML body içinden Chatroom ID ayıkla
+    const match = html.match(/\"chatroom_id\":(\d+)/) || html.match(/\"chatroom\":\{\"id\":(\d+)/);
+    
+    if (match && match[1]) {
+      const chatroomId = parseInt(match[1]);
+      logger.log(`[Kick API Test] Body içinden ID bulundu: ${chatroomId}`);
+      
+      return NextResponse.json({
+        chatroomId,
+        slug
+      });
+    }
+
+    logger.error(`[Kick API Test] Sayfa gövdesinde ID bulunamadı.`);
+    return NextResponse.json({ error: "ID bulunamadı" }, { status: 404 });
+  } catch (error) {
+    logger.error(`[Kick API Test] Hata:`, error);
+    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
