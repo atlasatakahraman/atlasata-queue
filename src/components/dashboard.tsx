@@ -85,6 +85,7 @@ export function Dashboard() {
   const [pickOnlyInGame, setPickOnlyInGame] = useState(false);
   const [pendingTeamAddition, setPendingTeamAddition] = useState<{ playerId: string, teamId: "A" | "B" } | null>(null);
   const [manualAddOpen, setManualAddOpen] = useState(false);
+  const [resolutionError, setResolutionError] = useState(false);
 
   const kickAccessToken = (session as unknown as Record<string, unknown>)?.accessToken as string | undefined;
 
@@ -163,7 +164,7 @@ export function Dashboard() {
 
       fetchRiotData(newPlayer);
     },
-    [queue, fetchRiotData]
+    [queue, fetchRiotData, settings.disableRiotApi]
   );
 
   const filteredPlayers = useMemo(() => {
@@ -229,7 +230,7 @@ export function Dashboard() {
     const sessionChatroomId = (session?.user as any)?.chatroomId;
     if (status === "authenticated" && sessionChatroomId && !settings.manualChatroomId) {
       updateSettings({ manualChatroomId: String(sessionChatroomId) });
-      logger.log("[Dashboard] Auto-populated chatroom ID from session:", sessionChatroomId);
+      console.log("[Dashboard] Auto-populated chatroom ID from session:", sessionChatroomId);
     }
   }, [status, session, settings.manualChatroomId, updateSettings]);
 
@@ -264,6 +265,13 @@ export function Dashboard() {
         updateSettings({ manualChatroomId: String(id) });
         logger.log("[Dashboard] Auto-saved discovered chatroom ID:", id);
       }
+    },
+    onResolutionFail: () => {
+      setResolutionError(true);
+      setSettingsOpen(true);
+      toast.error("Kick ID Bulunamadı", {
+        description: "Kanal ID otomatik çözümlenemedi. Lütfen Manuel ID kısmını doldurun.",
+      });
     },
   });
 
@@ -612,6 +620,7 @@ export function Dashboard() {
           onOpenChange={setSettingsOpen}
           settings={settings}
           onUpdateSettings={updateSettings}
+          hasResolutionError={resolutionError}
         />
 
         <SinglePickDialog

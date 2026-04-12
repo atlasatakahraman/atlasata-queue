@@ -36,14 +36,20 @@ export function useLiveStatus({
     if (!channelSlug) return;
 
     try {
-      const res = await fetch(
-        `/api/kick/channel?slug=${encodeURIComponent(channelSlug)}`
-      );
+      // Direct browser fetch to Kick V2
+      const res = await fetch(`https://kick.com/api/v2/channels/${channelSlug}`, {
+        headers: {
+          "Accept": "application/json",
+        },
+      });
+      
       if (!res.ok) return;
 
       const data = await res.json();
-      const isLive = data.isLive === true;
-      const streamTitle = data.streamTitle ?? null;
+      
+      // Kick V2 API uses data.livestream being non-null to indicate live status
+      const isLive = !!data.livestream;
+      const streamTitle = data.livestream?.session_title ?? null;
 
       setStatus({
         isLive,
@@ -57,7 +63,8 @@ export function useLiveStatus({
       }
 
       wasLiveRef.current = isLive;
-    } catch {
+    } catch (err) {
+      // Silently fail, it might be a temporary network issue or CORS
     }
   }, [channelSlug]);
 
