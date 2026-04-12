@@ -41,8 +41,25 @@ const kickProvider = {
       const json = await res.json();
       const userData = json.data?.[0] ?? {};
 
-      // 2. Try to get chatroom_id from user data or channel info
-      // The public/v1/users might have it, if not, we can try to find it
+      // 2. Also fetch channel data to get chatroom_id as fallback
+      if (userData.name) {
+        try {
+          const channelRes = await fetch(`https://api.kick.com/public/v1/channels/${userData.name}`, {
+            headers: {
+              Authorization: `Bearer ${tokens.access_token}`,
+              Accept: "application/json",
+            },
+          });
+          const channelJson = await channelRes.json();
+          if (channelJson.data) {
+            userData.chatroom = channelJson.data.chatroom;
+            userData.channel_id = channelJson.data.id;
+          }
+        } catch (e) {
+          console.error("Failed to fetch channel info during login", e);
+        }
+      }
+
       return userData;
     },
   },

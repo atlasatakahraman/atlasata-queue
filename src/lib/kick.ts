@@ -73,25 +73,29 @@ export function connectToKickChat(
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        
+        // Log basic info for EVERY event to find the right one
+        if (data.event !== "pusher:ping" && data.event !== "pusher:pong") {
+          logger.log("[Kick WS Raw Event]", data.event, data);
+        }
 
         if (data.event === "pusher:ping") {
           ws?.send(JSON.stringify({ event: "pusher:pong", data: {} }));
           return;
         }
 
-        if (data.event !== "pusher:pong" && data.event !== "pusher_internal:subscription_succeeded") {
-          logger.log("[Kick WS Event]", data.event, data.channel, typeof data.data === 'string' ? data.data.substring(0, 200) : data.data);
-        }
-
         if (
           data.event === "App\\Events\\ChatMessageEvent" ||
           data.event === "ChatMessageEvent" ||
-          data.event === "App\\Events\\ChatMessageSentEvent"
+          data.event === "App\\Events\\ChatMessageSentEvent" ||
+          data.event === "App\\Events\\MessageSent" ||
+          data.event === "MessageSent"
         ) {
           const chatData = typeof data.data === 'string'
             ? JSON.parse(data.data) as KickChatEvent
             : data.data as KickChatEvent;
-          logger.log("[Kick Chat Message]", chatData.sender?.username, chatData.content);
+          
+          logger.log("[Kick Chat Message Detected]", chatData.sender?.username, chatData.content);
           onMessage(chatData);
         }
       } catch (err) {

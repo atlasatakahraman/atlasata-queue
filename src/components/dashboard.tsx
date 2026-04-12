@@ -56,9 +56,10 @@ import {
   Swords,
   Sparkles,
 } from "lucide-react";
+import { logger } from "@/lib/utils";
 
 export function Dashboard() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const { settings, updateSettings, isConfigured } = useSettings();
 
   const liveStatus = useLiveStatus({
@@ -223,12 +224,21 @@ export function Dashboard() {
     }
   }, [queue, settings.disableRiotApi, handleDuplicateAttempt, fetchRiotData]);
 
+  // Auto-fill chatroomId from session if settings are empty
+  useEffect(() => {
+    const sessionChatroomId = (session?.user as any)?.chatroomId;
+    if (status === "authenticated" && sessionChatroomId && !settings.manualChatroomId) {
+      updateSettings({ manualChatroomId: String(sessionChatroomId) });
+      logger.log("[Dashboard] Auto-populated chatroom ID from session:", sessionChatroomId);
+    }
+  }, [status, session, settings.manualChatroomId, updateSettings]);
+
   const handleAfkCommand = useCallback((kickUsername: string) => {
     const existingPlayer = queue.players.find(p => p.kickUsername.toLowerCase() === kickUsername.toLowerCase());
     if (existingPlayer) {
       const isCurrentlyAway = existingPlayer.isAway;
       queue.updatePlayer(existingPlayer.id, { isAway: !isCurrentlyAway });
-      
+
       if (isCurrentlyAway) {
         toast.info("Geri Döndü", { description: `${existingPlayer.kickUsername} tekrar bilgisayar başında.` });
       } else {
@@ -690,7 +700,7 @@ export function Dashboard() {
                   if (!queue.teamResult) {
                     queue.createEmptyTeams();
                   }
-                  
+
                   if (pendingTeamAddition) {
                     queue.addPlayerToTeam(pendingTeamAddition.playerId, pendingTeamAddition.teamId, settings.teamSize);
                   }

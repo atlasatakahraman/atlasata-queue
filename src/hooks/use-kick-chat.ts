@@ -65,21 +65,23 @@ export function useKickChat({
     }
 
     if (initialChatroomId) {
+      logger.log(`[Kick Chat] [Debug] Using provided initial chatroom ID: ${initialChatroomId}`);
       setChatroomId(initialChatroomId);
       return;
     }
 
+    logger.log(`[Kick Chat] [Debug] No initial ID found. Attempting to resolve slug: ${channelSlug}`);
     let cancelled = false;
     getKickChatroomId(channelSlug, accessToken).then((id) => {
       if (!cancelled) {
         setChatroomId(id);
         if (id) {
-          logger.log(`[Kick Chat] Chatroom resolved: ${id} for ${channelSlug}`);
+          logger.log(`[Kick Chat] [Debug] Chatroom resolved via API: ${id} for ${channelSlug}`);
           toast.success("Kick Sohbet", {
             description: `${channelSlug} kanalına bağlanıyor...`,
           });
         } else {
-          logger.warn(`[Kick Chat] Could not resolve chatroom for ${channelSlug}`);
+          logger.error(`[Kick Chat] [Debug] FAILED to resolve chatroom for ${channelSlug}. Please enter ID manually in Settings.`);
         }
       }
     });

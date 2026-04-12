@@ -21,7 +21,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Key, Globe, Users, Radio, MessageSquare, Ghost, UserX, Hash } from "lucide-react";
+import { Key, Globe, Users, Radio, MessageSquare, Ghost, UserX, Hash, AlertTriangle } from "lucide-react";
 
 interface SettingsSheetProps {
   open: boolean;
@@ -174,26 +174,35 @@ export function SettingsSheet({
 
           <Separator />
 
-          {/* Manual Chatroom ID */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Hash className="h-4 w-4 text-muted-foreground" />
-              <Label htmlFor="manual-chatroom-id" className="text-sm font-medium">
-                Manuel Chatroom ID (Opsiyonel)
-              </Label>
+          {/* Debug / Troubleshooting Section */}
+          <div className="space-y-4 bg-destructive/5 p-4 rounded-lg border border-destructive/20 mt-4">
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <Label className="text-sm font-bold uppercase tracking-wider">Hata Ayıklama (Debug)</Label>
             </div>
-            <Input
-              id="manual-chatroom-id"
-              placeholder="Örn: 1234567"
-              value={settings.manualChatroomId}
-              onChange={(e) =>
-                onUpdateSettings({ manualChatroomId: e.target.value.replace(/[^0-9]/g, "") })
-              }
-              className="text-sm"
-            />
-            <p className="text-[11px] text-muted-foreground">
-              Vercel'de "Could not resolve chatroom" hatası alıyorsanız buraya ID'nizi elle girin. ID'nizi bulmak için tarayıcıda kanalınızdayken <code className="bg-muted px-1 rounded text-[10px]">CTRL+U</code> yapıp "chatroom_id" diye aratabilirsiniz.
-            </p>
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Hash className="h-4 w-4 text-muted-foreground" />
+                <Label htmlFor="manual-chatroom-id" className="text-xs font-medium">
+                  Manuel Chatroom ID
+                </Label>
+              </div>
+              <Input
+                id="manual-chatroom-id"
+                placeholder="Örn: 65286905"
+                value={settings.manualChatroomId}
+                onChange={(e) =>
+                  onUpdateSettings({ manualChatroomId: e.target.value.replace(/[^0-9]/g, "") })
+                }
+                className="text-xs bg-background/50 border-destructive/20 focus-visible:ring-destructive"
+              />
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                Vercel'de <strong>"Could not resolve chatroom"</strong> hatası alıyorsanız, kanal ID'nizi buraya elle girin. 
+                <br />
+                <span className="text-destructive/80 italic">Tip: atlasatakahraman için bu ID: 65286905</span>
+              </p>
+            </div>
           </div>
 
           <Separator />
