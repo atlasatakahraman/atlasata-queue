@@ -1,30 +1,34 @@
 import { NextRequest } from "next/server";
-import { exec } from "child_process";
-import { promisify } from "util";
 import { logger } from "@/lib/utils";
-
-const execAsync = promisify(exec);
 
 /**
  * GET /api/kick/channel?slug=channelName
- *
+ * 
  * Resolves the Kick chatroom ID and live status.
- * Uses curl to bypass Cloudflare's TLS fingerprinting.
+ * Uses standard fetch with optimized headers to bypass basic Cloudflare checks
+ * on Vercel environments.
  */
 export async function GET(request: NextRequest) {
   const slug = request.nextUrl.searchParams.get("slug");
-
+  
   if (!slug) {
     return Response.json({ error: "Kanal adı gerekli" }, { status: 400 });
   }
 
   try {
-    const data = await fetchChannelViaCurl(slug);
+    // Try v1 API first as it's often more stable on serverless environments
+    let data = await fetchChannelData(slug, "v1");
+    
+    // If v1 fails, try v2
+    if (!data) {
+      data = await fetchChannelData(slug, "v2");
+    }
 
     if (data) {
-      const chatroomId = data.chatroom?.id ?? null;
+      const chatroomId = data.chatroom?.id ?? data.id ?? null;
       const isLive = data.livestream !== null && data.livestream !== undefined;
-      const streamTitle = data.livestream?.session_title ?? null;
+      const streamTitle = data.livestream?.session_title ?? data.livestream?.title ?? null;
+      const actualSlug = data.slug ?? slug;
 
       logger.log(
         `[Kick Channel] Resolved ${slug}: chatroom=${chatroomId}, live=${isLive}`
@@ -32,39 +36,46 @@ export async function GET(request: NextRequest) {
 
       return Response.json({
         chatroomId,
-        slug: data.slug ?? slug,
+        slug: actualSlug,
         isLive,
         streamTitle,
       });
     }
 
-    logger.warn(`[Kick Channel] Could not resolve chatroom for ${slug}`);
-    return Response.json({ error: "Kanal bulunamadı" }, { status: 404 });
+    logger.warn(`[Kick Channel] Could not resolve chatroom for ${slug} after trying multiple APIs`);
+    return Response.json({ error: "Kanal bulunamadı veya koruma engeline takıldı" }, { status: 404 });
   } catch (err) {
     logger.error("[Kick Channel API Error]", err);
     return Response.json({ error: "Kick API hatası" }, { status: 500 });
   }
 }
 
-/**
- * Use curl to fetch channel data from Kick's v2 API.
- * Node.js fetch is blocked by Cloudflare TLS fingerprinting,
- * but curl works because it uses OpenSSL.
- */
-async function fetchChannelViaCurl(
-  slug: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): Promise<any | null> {
-  try {
-    const safeSlug = slug.replace(/[^a-zA-Z0-9_-]/g, "");
-    const { stdout } = await execAsync(
-      `curl -s -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" -H "Accept: application/json" "https://kick.com/api/v2/channels/${safeSlug}"`,
-      { timeout: 10000 }
-    );
+async function fetchChannelData(slug: string, version: "v1" | "v2") {
+  const safeSlug = slug.replace(/[^a-zA-Z0-9_-]/g, "");
+  const url = `https://kick.com/api/${version}/channels/${safeSlug}`;
 
-    return JSON.parse(stdout);
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache"
+      },
+      next: { revalidate: 60 } // Cache for 1 minute on Vercel
+    });
+
+    if (!res.ok) {
+      if (res.status === 403 || res.status === 429) {
+        logger.warn(`[Kick Channel] ${version} API blocked (CF/RateLimit) for ${slug}`);
+      }
+      return null;
+    }
+
+    return await res.json();
   } catch (err) {
-    logger.warn(`[Kick Channel] curl failed for ${slug}:`, err);
+    logger.warn(`[Kick Channel] ${version} fetch failed for ${slug}:`, err);
     return null;
   }
 }

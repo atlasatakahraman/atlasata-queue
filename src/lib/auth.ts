@@ -31,6 +31,7 @@ const kickProvider = {
   userinfo: {
     url: "https://api.kick.com/public/v1/users",
     async request({ tokens }: { tokens: { access_token: string } }) {
+      // 1. Get user info
       const res = await fetch("https://api.kick.com/public/v1/users", {
         headers: {
           Authorization: `Bearer ${tokens.access_token}`,
@@ -38,7 +39,11 @@ const kickProvider = {
         },
       });
       const json = await res.json();
-      return json.data?.[0] ?? {};
+      const userData = json.data?.[0] ?? {};
+
+      // 2. Try to get chatroom_id from user data or channel info
+      // The public/v1/users might have it, if not, we can try to find it
+      return userData;
     },
   },
   profile(profile: Record<string, unknown>) {
@@ -47,6 +52,7 @@ const kickProvider = {
       name: profile.name as string | null,
       email: profile.email as string | null,
       image: profile.profile_picture as string | null,
+      chatroomId: (profile.chatroom as any)?.id ?? null,
     };
   },
   checks: ["pkce", "state"] as ("pkce" | "state" | "none")[],
@@ -80,6 +86,7 @@ export const authConfig: NextAuthConfig = {
         token.kickId = user.id;
         token.kickUsername = user.name;
         token.kickImage = user.image;
+        token.chatroomId = (user as any).chatroomId;
       }
       if (account) {
         token.accessToken = account.access_token;
@@ -92,6 +99,7 @@ export const authConfig: NextAuthConfig = {
         session.user.id = token.kickId as string;
         session.user.name = token.kickUsername as string;
         session.user.image = token.kickImage as string;
+        (session.user as any).chatroomId = token.chatroomId;
       }
       (session as unknown as Record<string, unknown>).accessToken = token.accessToken;
       (session as unknown as Record<string, unknown>).kickUserId = token.kickUserId;

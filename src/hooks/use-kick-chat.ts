@@ -22,6 +22,7 @@ interface UseKickChatOptions {
   afkCommand: string;
   onAfkCommand: (kickUsername: string) => void;
   disableRiotApi?: boolean;
+  initialChatroomId?: number | null;
 }
 
 export function useKickChat({
@@ -35,9 +36,10 @@ export function useKickChat({
   afkCommand,
   onAfkCommand,
   disableRiotApi,
+  initialChatroomId = null,
 }: UseKickChatOptions) {
   const [isConnected, setIsConnected] = useState(false);
-  const [chatroomId, setChatroomId] = useState<number | null>(null);
+  const [chatroomId, setChatroomId] = useState<number | null>(initialChatroomId);
   const cleanupRef = useRef<(() => void) | null>(null);
 
   const onQueueCommandRef = useRef(onQueueCommand);
@@ -59,6 +61,11 @@ export function useKickChat({
   useEffect(() => {
     if (!channelSlug || !enabled) {
       setChatroomId(null);
+      return;
+    }
+
+    if (initialChatroomId) {
+      setChatroomId(initialChatroomId);
       return;
     }
 
