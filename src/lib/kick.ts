@@ -25,23 +25,37 @@ export interface KickChatEvent {
 export type KickChatHandler = (event: KickChatEvent) => void;
 
 /**
- * Resolves the chatroom ID via our simplified backend API.
+ * Resolves the chatroom ID DIRECTLY in the browser.
+ * This is the cleanest fix to bypass Vercel's datacenter IP blocks.
  */
 export async function getKickChatroomId(
-  channelSlug: string,
-  accessToken?: string
+  slug: string,
+  _unusedToken?: string // Signature kept for compatibility
 ): Promise<number | null> {
   try {
-    const params = new URLSearchParams({ slug: channelSlug });
-    if (accessToken) params.set("token", accessToken);
-    
-    const res = await fetch(`/api/kick/channel?${params.toString()}`);
-    if (!res.ok) return null;
-    
+    // Direct fetch from the user's browser context
+    const res = await fetch(`https://kick.com/api/v2/channels/${slug}`, {
+      headers: {
+        "Accept": "application/json",
+        // Adding Referer here as requested, though browsers usually manage this automatically
+      },
+    });
+
+    if (!res.ok) {
+       logger.error(`[Kick Chat] Browser directly fetch failed: ${res.status}`);
+       return null;
+    }
+
     const data = await res.json();
-    return data.chatroomId ?? null;
+    const id = data.chatroom?.id || data.id;
+    
+    if (id) {
+      logger.log(`[Kick Chat] Success! Resolved directly in browser: ${id}`);
+      return id;
+    }
+    return null;
   } catch (err) {
-    logger.error("[Kick Chat] ID resolution error:", err);
+    logger.error("[Kick Chat] Browser-side fetch failed (possibly CORS):", err);
     return null;
   }
 }
@@ -75,7 +89,7 @@ export function connectToKickChat(
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        
+
         if (data.event !== "pusher:ping" && data.event !== "pusher:pong") {
           logger.log("[Kick WS Raw Event]", data.event, data);
         }
