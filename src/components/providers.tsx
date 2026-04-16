@@ -5,6 +5,7 @@ import { SessionProvider } from "next-auth/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -20,8 +21,9 @@ export function Providers({ children }: ProvidersProps) {
         disableTransitionOnChange={false}
       >
         <TooltipProvider delayDuration={200}>
-          {children}
+          <SpeedInsights />
           <Analytics />
+          {children}
           <Toaster
             className="select-none"
             position="bottom-center"
