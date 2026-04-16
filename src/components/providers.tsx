@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 import { SessionProvider } from "next-auth/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
+import { Analytics } from "@vercel/analytics/next";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -20,6 +21,7 @@ export function Providers({ children }: ProvidersProps) {
       >
         <TooltipProvider delayDuration={200}>
           {children}
+          <Analytics />
           <Toaster
             className="select-none"
             position="bottom-center"
