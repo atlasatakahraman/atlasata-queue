@@ -1,11 +1,19 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { ThemeProvider } from "next-themes";
 import { SessionProvider } from "next-auth/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+
+const Analytics = dynamic(
+  () => import("@vercel/analytics/next").then((m) => m.Analytics),
+  { ssr: false }
+);
+const SpeedInsights = dynamic(
+  () => import("@vercel/speed-insights/next").then((m) => m.SpeedInsights),
+  { ssr: false }
+);
 
 interface ProvidersProps {
   children: React.ReactNode;

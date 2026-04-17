@@ -1,35 +1,40 @@
 "use client";
 
+import { useState, useCallback, useRef, useMemo } from "react";
 import type { QueuePlayer } from "@/types";
-import { TIER_LABELS } from "@/types";
-import { PROFILE_ICON_URL } from "@/lib/constants";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+  type DragStartEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { PlayerCard } from "./player-card";
-import { PlayerContextMenu } from "./player-context-menu";
-import { X, Shield, Clock } from "lucide-react";
-import { toast } from "sonner";
+import { SortablePlayerRow } from "./sortable-player-row";
+import { Shield } from "lucide-react";
 
 interface QueueTableProps {
   players: QueuePlayer[];
   onRemovePlayer: (id: string) => void;
   onUpdatePlayer: (id: string, data: Partial<QueuePlayer>) => void;
+  onReorder?: (activeId: string, overId: string) => void;
   queueCommand?: string;
   disableRiotApi?: boolean;
   onAddToTeam?: (id: string, team: "A" | "B") => void;
@@ -37,38 +42,77 @@ interface QueueTableProps {
   isTeamsCreated?: boolean;
   onCreateTeamsRequest?: (playerId: string, teamId: "A" | "B") => void;
   onManualAddRequest?: () => void;
-}
-
-function getRankColorClass(tier?: string): string {
-  const colors: Record<string, string> = {
-    IRON: "bg-rank-iron/15 text-rank-iron border-rank-iron/30",
-    BRONZE: "bg-rank-bronze/15 text-rank-bronze border-rank-bronze/30",
-    SILVER: "bg-rank-silver/15 text-rank-silver border-rank-silver/30",
-    GOLD: "bg-rank-gold/15 text-rank-gold border-rank-gold/30",
-    PLATINUM: "bg-rank-platinum/15 text-rank-platinum border-rank-platinum/30",
-    EMERALD: "bg-rank-emerald/15 text-rank-emerald border-rank-emerald/30",
-    DIAMOND: "bg-rank-diamond/15 text-rank-diamond border-rank-diamond/30",
-    MASTER: "bg-rank-master/15 text-rank-master border-rank-master/30",
-    GRANDMASTER:
-      "bg-rank-grandmaster/15 text-rank-grandmaster border-rank-grandmaster/30",
-    CHALLENGER:
-      "bg-rank-challenger/15 text-rank-challenger border-rank-challenger/30",
-  };
-  return colors[tier ?? ""] ?? "";
+  onEditPlayer?: (player: QueuePlayer) => void;
 }
 
 export function QueueTable({
   players,
   onRemovePlayer,
   onUpdatePlayer,
+  onReorder,
   queueCommand = "!sıra",
   disableRiotApi = false,
   onAddToTeam,
   onRemoveFromTeam,
   isTeamsCreated = false,
   onCreateTeamsRequest,
-  onManualAddRequest
+  onEditPlayer,
 }: QueueTableProps) {
+  // Track "seen" IDs so mount animation only fires once
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
+  }, []);
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      setActiveId(null);
+      const { active, over } = event;
+      if (over && active.id !== over.id) {
+        onReorder?.(String(active.id), String(over.id));
+      }
+    },
+    [onReorder]
+  );
+
+  const handleDragCancel = useCallback(() => {
+    setActiveId(null);
+  }, []);
+
+  // Pre-compute time strings once per render (not per row)
+  const timeData = useMemo(() => {
+    return players.map((p) => {
+      const date = new Date(p.joinedAt);
+      return {
+        formatted: date.toLocaleTimeString("tr-TR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        full: date.toLocaleString("tr-TR"),
+      };
+    });
+  }, [players]);
+
+  const playerIds = useMemo(() => players.map((p) => p.id), [players]);
+
+  const activePlayer = activeId
+    ? players.find((p) => p.id === activeId)
+    : null;
+  const activeIndex = activePlayer
+    ? players.findIndex((p) => p.id === activeId)
+    : -1;
+
   if (players.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center h-[calc(100vh-22rem)] min-h-[300px]">
@@ -81,7 +125,8 @@ export function QueueTable({
         <p className="mt-1 max-w-xs text-xs text-muted-foreground/70">
           Kick sohbetinde{" "}
           <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">
-            {queueCommand}{disableRiotApi ? "" : " İsim#TAG"}
+            {queueCommand}
+            {disableRiotApi ? "" : " İsim#TAG"}
           </code>{" "}
           yazarak veya sağ tıklayarak sıraya katılabilirsiniz.
         </p>
@@ -90,188 +135,88 @@ export function QueueTable({
   }
 
   return (
-    <ScrollArea className="h-[calc(100vh-22rem)] min-h-[300px]" id="queue-scroll-area">
-      <Table>
-        <TableHeader>
-          <TableRow className="hover:bg-transparent border-border/50">
-            <TableHead className="w-12 text-center text-xs">#</TableHead>
-            <TableHead className="text-xs">Oyuncu</TableHead>
-            <TableHead className="text-xs">Kick</TableHead>
-            <TableHead className="text-xs">Derece</TableHead>
-            <TableHead className="text-xs text-center">Kazanma</TableHead>
-            <TableHead className="w-14 text-xs text-center">Saat</TableHead>
-            <TableHead className="w-10" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {players.map((player, index) => (
-            <PlayerContextMenu
-              key={player.id}
-              player={player}
-              disableRiotApi={disableRiotApi}
-              onUpdatePlayer={onUpdatePlayer}
-              onRemovePlayer={onRemovePlayer}
-              onAddToTeam={onAddToTeam}
-              onRemoveFromTeam={onRemoveFromTeam}
-              isTeamsCreated={isTeamsCreated}
-              onCreateTeamsRequest={onCreateTeamsRequest}
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      modifiers={[restrictToVerticalAxis]}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <ScrollArea
+        className="h-[calc(100vh-22rem)] min-h-[300px]"
+        id="queue-scroll-area"
+      >
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent border-border/50">
+              <TableHead className="w-12 text-center text-xs">#</TableHead>
+              <TableHead className="text-xs">Oyuncu</TableHead>
+              <TableHead className="text-xs">Kick</TableHead>
+              <TableHead className="text-xs">Derece</TableHead>
+              <TableHead className="text-xs text-center">Kazanma</TableHead>
+              <TableHead className="w-14 text-xs text-center">Saat</TableHead>
+              <TableHead className="w-10" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <SortableContext
+              items={playerIds}
+              strategy={verticalListSortingStrategy}
             >
-              <TableRow
-                className={`group transition-colors duration-150 border-border/30 animate-in fade-in slide-in-from-bottom-1 cursor-default ${player.isAway ? "opacity-50 bg-warning/5" : ""
-                  } ${player.isInGame ? "bg-emerald-500/10 border-emerald-500/50" : ""}`}
-                style={{ animationDelay: `${index * 30}ms` }}
-              >
-                      <TableCell className="text-center">
-                        <span className="text-xs font-medium text-muted-foreground">
-                          {index + 1}
-                        </span>
-                      </TableCell>
+              {players.map((player, index) => {
+                const isNew = !seenIdsRef.current.has(player.id);
+                if (isNew) seenIdsRef.current.add(player.id);
 
-                      {/* Player */}
-                      <TableCell>
-                        <PlayerCard player={player}>
-                          <button className="flex text-left items-center gap-3 w-full min-w-[200px] outline-none group-focus-visible:ring-2 rounded-sm ring-ring">
-                            <div className="relative">
-                              <Avatar className="h-10 w-10 ring-2 ring-border/50 transition-shadow">
-                                {player.profileIconId ? (
-                                  <AvatarImage
-                                    src={PROFILE_ICON_URL(player.profileIconId)}
-                                    alt={player.riotGameName}
-                                  />
-                                ) : null}
-                                <AvatarFallback className="text-xs font-semibold">
-                                  {player.riotGameName.charAt(0).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              {player.summonerLevel && (
-                                <div className="absolute -bottom-2 -right-2 bg-background border border-border rounded-full px-1.5 py-px text-[9px] font-bold shadow-sm">
-                                  {player.summonerLevel}
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0 flex flex-col justify-center">
-                              <div className="flex items-center gap-2">
-                                <p className="text-sm font-semibold tracking-tight truncate max-w-[140px] group-hover:text-primary transition-colors">
-                                  {player.riotGameName}
-                                </p>
-                                {player.isAway && (
-                                  <Badge variant="outline" className="h-4 px-1.5 py-0 text-[9px] border-warning/50 text-warning bg-warning/10 font-semibold tracking-wider shrink-0">
-                                    UZAKTA
-                                  </Badge>
-                                )}
-                                {player.isInGame && (
-                                  <Badge variant="outline" className="h-4 px-1.5 py-0 text-[9px] border-emerald-500/50 text-emerald-500 bg-emerald-500/10 font-semibold tracking-wider shrink-0">
-                                    OYUNDA
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                <p className="text-[10px] text-muted-foreground">
-                                  #{player.riotTagLine}
-                                </p>
-                              </div>
-                            </div>
-                          </button>
-                        </PlayerCard>
-                      </TableCell>
+                return (
+                  <SortablePlayerRow
+                    key={player.id}
+                    player={player}
+                    index={index}
+                    isNew={isNew}
+                    disableRiotApi={disableRiotApi}
+                    onRemovePlayer={onRemovePlayer}
+                    onUpdatePlayer={onUpdatePlayer}
+                    onAddToTeam={onAddToTeam}
+                    onRemoveFromTeam={onRemoveFromTeam}
+                    isTeamsCreated={isTeamsCreated}
+                    onCreateTeamsRequest={onCreateTeamsRequest}
+                    onEditPlayer={onEditPlayer}
+                    joinTimeFormatted={timeData[index].formatted}
+                    joinTimeFull={timeData[index].full}
+                  />
+                );
+              })}
+            </SortableContext>
+          </TableBody>
+        </Table>
+      </ScrollArea>
 
-                      {/* Kick Username */}
-                      <TableCell>
-                        <span className="text-xs text-muted-foreground">
-                          {player.kickUsername}
-                        </span>
-                      </TableCell>
-
-                      {/* Rank */}
-                      <TableCell>
-                        {player.isLoading ? (
-                          <Skeleton className="h-5 w-16" />
-                        ) : player.hasError ? (
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <span className="text-[10px] text-warning cursor-help">
-                                Bilinmiyor
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Riot API&apos;den veri alınamadı</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        ) : player.rankedTier ? (
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] font-medium flex justify-center w-16 ${getRankColorClass(player.rankedTier)}`}
-                          >
-                            {TIER_LABELS[player.rankedTier]}
-                            {player.rankedTier !== "UNRANKED" &&
-                              !["MASTER", "GRANDMASTER", "CHALLENGER"].includes(
-                                player.rankedTier
-                              ) &&
-                              ` ${player.rankedDivision}`}
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-
-                      {/* Win Rate */}
-                      <TableCell className="text-center">
-                        {player.isLoading ? (
-                          <Skeleton className="mx-auto h-4 w-10" />
-                        ) : player.hasError ? (
-                          <span className="text-[10px] text-warning">—</span>
-                        ) : player.winRate !== undefined ? (
-                          <span
-                            className={`text-xs font-medium ${player.winRate >= 50
-                              ? "text-success"
-                              : "text-destructive"
-                              }`}
-                          >
-                            %{player.winRate}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-
-                      {/* Join Time */}
-                      <TableCell className="text-center">
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <span className="flex items-center justify-center gap-1 text-[11px] text-muted-foreground">
-                              <Clock className="h-3 w-3" />
-                              {new Date(player.joinedAt).toLocaleTimeString("tr-TR", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>
-                              Katılma:{" "}
-                              {new Date(player.joinedAt).toLocaleString("tr-TR")}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TableCell>
-
-                      {/* Remove */}
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-muted-foreground hover:text-destructive"
-                          onClick={() => onRemovePlayer(player.id)}
-                          aria-label={`${player.riotGameName} oyuncusunu kaldır`}
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  </PlayerContextMenu>
-          ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          );
+      {/* Drag overlay — semi-transparent ghost */}
+      <DragOverlay dropAnimation={null}>
+        {activePlayer && activeIndex >= 0 ? (
+          <div className="drag-overlay rounded-lg">
+            <Table>
+              <TableBody>
+                <SortablePlayerRow
+                  player={activePlayer}
+                  index={activeIndex}
+                  isNew={false}
+                  disableRiotApi={disableRiotApi}
+                  onRemovePlayer={onRemovePlayer}
+                  onUpdatePlayer={onUpdatePlayer}
+                  onAddToTeam={onAddToTeam}
+                  onRemoveFromTeam={onRemoveFromTeam}
+                  isTeamsCreated={isTeamsCreated}
+                  onCreateTeamsRequest={onCreateTeamsRequest}
+                  joinTimeFormatted={timeData[activeIndex].formatted}
+                  joinTimeFull={timeData[activeIndex].full}
+                />
+              </TableBody>
+            </Table>
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
 }

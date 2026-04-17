@@ -13,6 +13,7 @@ import {
 import {
   Copy,
   Gamepad2,
+  Pencil,
   Trash2,
   Coffee,
   UserCheck,
@@ -31,9 +32,10 @@ interface PlayerContextMenuProps {
   onRemoveFromTeam?: (id: string) => void;
   isTeamsCreated?: boolean;
   onCreateTeamsRequest?: (playerId: string, teamId: "A" | "B") => void;
+  onEditPlayer?: (player: QueuePlayer) => void;
 }
 
-export function PlayerContextMenu({
+const PlayerContextMenuInner = function PlayerContextMenu({
   player,
   children,
   disableRiotApi = false,
@@ -43,6 +45,7 @@ export function PlayerContextMenu({
   onRemoveFromTeam,
   isTeamsCreated = false,
   onCreateTeamsRequest,
+  onEditPlayer,
 }: PlayerContextMenuProps) {
   return (
     <ContextMenu>
@@ -79,6 +82,13 @@ export function PlayerContextMenu({
           Kick Adı
           <span className="mx-1 text-muted-foreground">—</span>
           Kopyala
+        </ContextMenuItem>
+        <ContextMenuItem
+          className="cursor-pointer"
+          onClick={() => onEditPlayer?.(player)}
+        >
+          <Pencil className="mr-2 h-4 w-4" />
+          Düzenle
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem
@@ -157,3 +167,6 @@ export function PlayerContextMenu({
     </ContextMenu>
   );
 }
+
+export const PlayerContextMenu = React.memo(PlayerContextMenuInner);
+PlayerContextMenu.displayName = "PlayerContextMenu";

@@ -240,6 +240,22 @@
   .dot-offline {
     @apply h-2 w-2 rounded-full bg-destructive shadow-[0_0_6px] shadow-destructive/50;
   }
+
+  /* ─── Drag & Drop Utilities ─────────────────────────────────── */
+  .dragging {
+    opacity: 0.4;
+    transform: scale(0.98);
+  }
+
+  .drag-overlay {
+    background: var(--card);
+    box-shadow:
+      0 12px 36px oklch(0 0 0 / 25%),
+      0 4px 12px oklch(0 0 0 / 15%);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    pointer-events: none;
+  }
 }
 
 /* ─── Scrollbar Styling ────────────────────────────────────────── */

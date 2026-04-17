@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
 import { useQueue } from "@/hooks/use-queue";
 import { useSettings } from "@/hooks/use-settings";
@@ -11,8 +12,9 @@ import { Header } from "./header";
 import { QueueTable } from "./queue-table";
 import { TeamDisplay } from "./team-display";
 import { SettingsSheet } from "./settings-sheet";
-import { SinglePickDialog } from "./single-pick-dialog";
-import { ManualAddDialog } from "./manual-add-dialog";
+const SinglePickDialog = dynamic(() => import("./single-pick-dialog").then((m) => m.SinglePickDialog), { ssr: false });
+const ManualAddDialog = dynamic(() => import("./manual-add-dialog").then((m) => m.ManualAddDialog), { ssr: false });
+const EditPlayerDialog = dynamic(() => import("./edit-player-dialog").then((m) => m.EditPlayerDialog), { ssr: false });
 import { GlobalContextMenu } from "./global-context-menu";
 import { Watermark } from "./watermark";
 import { Button } from "@/components/ui/button";
@@ -86,6 +88,7 @@ export function Dashboard() {
   const [pendingTeamAddition, setPendingTeamAddition] = useState<{ playerId: string, teamId: "A" | "B" } | null>(null);
   const [manualAddOpen, setManualAddOpen] = useState(false);
   const [resolutionError, setResolutionError] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState<QueuePlayer | null>(null);
 
   const kickAccessToken = (session as unknown as Record<string, unknown>)?.accessToken as string | undefined;
 
@@ -233,6 +236,17 @@ export function Dashboard() {
       console.log("[Dashboard] Auto-populated chatroom ID from session:", sessionChatroomId);
     }
   }, [status, session, settings.manualChatroomId, updateSettings]);
+
+  // Auto-fill kickChannelName from session (Kick sign-in username = channel slug)
+  useEffect(() => {
+    if (status === "authenticated" && session?.user?.name) {
+      const channelSlug = session.user.name.toLowerCase();
+      if (settings.kickChannelName !== channelSlug) {
+        updateSettings({ kickChannelName: channelSlug });
+        logger.log("[Dashboard] Auto-populated kick channel from session:", channelSlug);
+      }
+    }
+  }, [status, session, settings.kickChannelName, updateSettings]);
 
   const handleAfkCommand = useCallback((kickUsername: string) => {
     const existingPlayer = queue.players.find(p => p.kickUsername.toLowerCase() === kickUsername.toLowerCase());
@@ -537,12 +551,14 @@ export function Dashboard() {
                         players={filteredPlayers}
                         onRemovePlayer={queue.removePlayer}
                         onUpdatePlayer={queue.updatePlayer}
+                        onReorder={queue.reorderPlayers}
                         queueCommand={settings.queueCommand}
                         disableRiotApi={settings.disableRiotApi}
                         onAddToTeam={(id, tid) => queue.addPlayerToTeam(id, tid, settings.teamSize)}
                         onRemoveFromTeam={queue.removePlayerFromTeam}
                         isTeamsCreated={!!queue.teamResult}
                         onCreateTeamsRequest={(playerId, teamId) => setPendingTeamAddition({ playerId, teamId })}
+                        onEditPlayer={setEditingPlayer}
                       />
                     </div>
                   </GlobalContextMenu>
@@ -591,6 +607,8 @@ export function Dashboard() {
                     onUpdatePlayer={queue.updatePlayer}
                     onRemovePlayer={queue.removePlayer}
                     disableRiotApi={settings.disableRiotApi}
+                    onReorderTeam={queue.reorderTeam}
+                    onEditPlayer={setEditingPlayer}
                   />
                 </div>
               ) : (
@@ -636,6 +654,14 @@ export function Dashboard() {
           open={manualAddOpen}
           onOpenChange={setManualAddOpen}
           onAdd={handleManualAdd}
+          disableRiotApi={!!settings.disableRiotApi}
+        />
+
+        <EditPlayerDialog
+          open={!!editingPlayer}
+          onOpenChange={(open) => { if (!open) setEditingPlayer(null); }}
+          player={editingPlayer}
+          onSave={queue.updatePlayer}
           disableRiotApi={!!settings.disableRiotApi}
         />
 

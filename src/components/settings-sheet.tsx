@@ -157,13 +157,15 @@ export function SettingsSheet({
             </div>
             <Input
               id="kick-channel"
-              placeholder="kanal-adi"
+              placeholder="Kanal adı oturum açıldığında otomatik ayarlanır"
               value={settings.kickChannelName}
-              onChange={(e) =>
-                onUpdateSettings({ kickChannelName: e.target.value.toLowerCase().trim() })
-              }
-              className="text-sm"
+              disabled
+              readOnly
+              className="text-sm opacity-70 cursor-not-allowed"
             />
+            <p className="text-[11px] text-muted-foreground">
+              Kick girişinden otomatik alınır, düzenlenemez.
+            </p>
           </div>
 
           {/* CONDITIONAL: Manual Chatroom ID Section (Debug or Error) */}

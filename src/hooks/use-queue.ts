@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { arrayMove } from "@dnd-kit/sortable";
 import type { QueuePlayer, TeamResult } from "@/types";
 import { TEAM_NAMES } from "@/lib/constants";
 import { logger } from "@/lib/utils";
@@ -18,6 +19,12 @@ export function useQueue(isLive: boolean = false) {
   const [teamResult, setTeamResult] = useState<TeamResult | null>(null);
 
   const hasRestoredRef = useRef(false);
+  const playersRef = useRef<QueuePlayer[]>(players);
+
+  // Keep ref in sync for stable callbacks
+  useEffect(() => {
+    playersRef.current = players;
+  }, [players]);
 
   useEffect(() => {
     if (!isLive) {
@@ -138,13 +145,45 @@ export function useQueue(isLive: boolean = false) {
 
   const isDuplicate = useCallback(
     (gameName: string, tagLine: string) => {
-      return players.some(
+      return playersRef.current.some(
         (p) =>
           p.riotGameName.toLowerCase() === gameName.toLowerCase() &&
           p.riotTagLine.toLowerCase() === tagLine.toLowerCase()
       );
     },
-    [players]
+    []
+  );
+
+  const reorderPlayers = useCallback(
+    (activeId: string, overId: string) => {
+      setPlayers((prev) => {
+        const oldIndex = prev.findIndex((p) => p.id === activeId);
+        const newIndex = prev.findIndex((p) => p.id === overId);
+        if (oldIndex === -1 || newIndex === -1) return prev;
+        return arrayMove(prev, oldIndex, newIndex);
+      });
+    },
+    []
+  );
+
+  const reorderTeam = useCallback(
+    (teamId: "A" | "B", activeId: string, overId: string) => {
+      setTeamResult((prev) => {
+        if (!prev) return prev;
+        const team = teamId === "A" ? prev.teamA : prev.teamB;
+        const oldIndex = team.players.findIndex((p) => p.id === activeId);
+        const newIndex = team.players.findIndex((p) => p.id === overId);
+        if (oldIndex === -1 || newIndex === -1) return prev;
+        const reordered = arrayMove(team.players, oldIndex, newIndex);
+        return {
+          ...prev,
+          ...(teamId === "A"
+            ? { teamA: { ...prev.teamA, players: reordered } }
+            : { teamB: { ...prev.teamB, players: reordered } }),
+        };
+      });
+    },
+    []
   );
 
   const randomizeTeams = useCallback(
@@ -312,7 +351,13 @@ export function useQueue(isLive: boolean = false) {
         teamB: { ...prev.teamB, players: prev.teamB.players.filter(p => p.id !== playerId) }
       };
     });
-    setPlayers((prev) => prev.map(p => p.id === playerId ? { ...p, isInGame: false } : p));
+    setPlayers((prev) => {
+      const idx = prev.findIndex((p) => p.id === playerId);
+      if (idx === -1) return prev;
+      const player = { ...prev[idx], isInGame: false };
+      const without = [...prev.slice(0, idx), ...prev.slice(idx + 1)];
+      return [...without, player];
+    });
   }, [players]);
 
   const movePlayerBetweenTeams = useCallback((playerId: string, targetTeamId: "A" | "B", teamSize: number) => {
@@ -379,6 +424,8 @@ export function useQueue(isLive: boolean = false) {
     clearQueue,
     clearSession,
     isDuplicate,
+    reorderPlayers,
+    reorderTeam,
     randomizeTeams,
     pickRandomPlayer,
     createEmptyTeams,
