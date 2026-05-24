@@ -127,10 +127,6 @@ export function useKickChat({
 
       if (disableRiotApiRef.current) {
         logger.log(`[Kick Chat] [Debug] Riot API disabled, adding as generic player.`);
-        if (isDuplicateRef.current(event.sender.username, "KICK")) {
-          onDuplicateAttemptRef.current(event.sender.username, event.sender.username);
-          return;
-        }
         onQueueCommandRef.current(event.sender.username, event.sender.username, "KICK");
         return;
       }
@@ -152,13 +148,7 @@ export function useKickChat({
       const { gameName, tagLine } = parsed;
       logger.log(`[Kick Chat] [Debug] Parsed Riot ID: ${gameName}#${tagLine}`);
 
-      if (isDuplicateRef.current(gameName, tagLine)) {
-        onDuplicateAttemptRef.current(
-          event.sender.username,
-          `${gameName}#${tagLine}`
-        );
-        return;
-      }
+
 
       onQueueCommandRef.current(event.sender.username, gameName, tagLine);
     },
