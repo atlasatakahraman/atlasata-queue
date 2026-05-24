@@ -393,13 +393,12 @@ export function Dashboard() {
             description: `${existingPlayer.kickUsername} tekrar bilgisayar başında.`,
           });
           return;
-        } else {
-          handleDuplicateAttempt(
-            kickUsername,
-            `${existingPlayer.riotGameName}#${existingPlayer.riotTagLine}`,
-          );
-          return;
         }
+        handleDuplicateAttempt(
+          kickUsername,
+          `${existingPlayer.riotGameName}#${existingPlayer.riotTagLine}`,
+        );
+        return;
       }
 
       const newPlayer: QueuePlayer = {
