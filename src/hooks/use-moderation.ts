@@ -170,7 +170,17 @@ export function useModeration() {
               (w) =>
                 w.kickUsername.toLowerCase() !== kickUsername.toLowerCase(),
             ),
-            punishments: [...prev.punishments, punishment],
+            punishments: [
+              ...prev.punishments.filter(
+                (p) =>
+                  p.kickUsername.toLowerCase() !== kickUsername.toLowerCase(),
+              ),
+              punishment,
+            ],
+            bans: prev.bans.filter(
+              (b) =>
+                b.kickUsername.toLowerCase() !== kickUsername.toLowerCase(),
+            ),
           };
           const respect = computeRespect(
             kickUsername,
@@ -207,7 +217,18 @@ export function useModeration() {
       setStore((prev) => {
         const next = {
           ...prev,
-          warnings: [...prev.warnings, warning],
+          warnings: [
+            ...prev.warnings.filter(
+              (w) => w.kickUsername.toLowerCase() !== kickUsername.toLowerCase()
+            ),
+            warning,
+          ],
+          punishments: prev.punishments.filter(
+            (p) => p.kickUsername.toLowerCase() !== kickUsername.toLowerCase()
+          ),
+          bans: prev.bans.filter(
+            (b) => b.kickUsername.toLowerCase() !== kickUsername.toLowerCase()
+          ),
         };
         // Recalculate respect score
         const respect = computeRespect(
@@ -260,7 +281,18 @@ export function useModeration() {
       setStore((prev) => {
         const next = {
           ...prev,
-          punishments: [...prev.punishments, punishment],
+          warnings: prev.warnings.filter(
+            (w) => w.kickUsername.toLowerCase() !== kickUsername.toLowerCase()
+          ),
+          punishments: [
+            ...prev.punishments.filter(
+              (p) => p.kickUsername.toLowerCase() !== kickUsername.toLowerCase()
+            ),
+            punishment,
+          ],
+          bans: prev.bans.filter(
+            (b) => b.kickUsername.toLowerCase() !== kickUsername.toLowerCase()
+          ),
         };
         const respect = computeRespect(
           kickUsername,
