@@ -717,6 +717,75 @@ export function Dashboard() {
     }
   }, [status, session, settings.kickChannelName, updateSettings]);
 
+  // Migrate queue/team data when the Riot ID requirement setting changes
+  const prevDisableRiotApiRef = useRef(settings.disableRiotApi);
+  useEffect(() => {
+    const prev = prevDisableRiotApiRef.current;
+    const curr = settings.disableRiotApi;
+    prevDisableRiotApiRef.current = curr;
+
+    // Skip initial mount or no change
+    if (prev === curr) return;
+
+    if (curr) {
+      // Riot API just got DISABLED → convert existing players to kick-only format
+      const convertPlayer = (p: QueuePlayer): QueuePlayer => ({
+        ...p,
+        riotGameName: p.kickUsername,
+        riotTagLine: "KICK",
+        isLoading: false,
+        hasError: false,
+        // Clear Riot-specific fields
+        rankedTier: undefined,
+        rankedDivision: undefined,
+        leaguePoints: undefined,
+        wins: undefined,
+        losses: undefined,
+        winRate: undefined,
+        profileIconId: undefined,
+        summonerLevel: undefined,
+      });
+
+      queue.setPlayers((prev) => prev.map(convertPlayer));
+      queue.setTeamResult((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          teamA: { ...prev.teamA, players: prev.teamA.players.map(convertPlayer) },
+          teamB: { ...prev.teamB, players: prev.teamB.players.map(convertPlayer) },
+        };
+      });
+
+      if (queue.players.length > 0) {
+        showToast("info", "Sıra Güncellendi", {
+          description: "Riot ID zorunluluğu kaldırıldı. Mevcut oyuncular güncellendi.",
+        });
+      }
+    } else {
+      // Riot API just got ENABLED → clear players that don't have real Riot IDs
+      const hasRealRiotId = (p: QueuePlayer) =>
+        p.riotTagLine !== "KICK" && p.riotTagLine !== "MANUEL" && p.riotGameName !== p.kickUsername;
+
+      const playersToKeep = queue.players.filter(hasRealRiotId);
+      const removedCount = queue.players.length - playersToKeep.length;
+
+      if (removedCount > 0) {
+        queue.setPlayers(playersToKeep);
+        queue.setTeamResult((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            teamA: { ...prev.teamA, players: prev.teamA.players.filter(hasRealRiotId) },
+            teamB: { ...prev.teamB, players: prev.teamB.players.filter(hasRealRiotId) },
+          };
+        });
+        showToast("warning", "Sıra Temizlendi", {
+          description: `Riot ID zorunluluğu açıldı. Riot ID'si olmayan ${removedCount} oyuncu sıradan çıkarıldı.`,
+        });
+      }
+    }
+  }, [settings.disableRiotApi]);
+
   const handleAfkCommand = useCallback(
     (kickUsername: string) => {
       const existingPlayer = queue.players.find(
