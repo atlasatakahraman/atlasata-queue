@@ -303,6 +303,12 @@ export function useModeration() {
       setStore((prev) => {
         const next = {
           ...prev,
+          warnings: prev.warnings.filter(
+            (w) => w.kickUsername.toLowerCase() !== kickUsername.toLowerCase()
+          ),
+          punishments: prev.punishments.filter(
+            (p) => p.kickUsername.toLowerCase() !== kickUsername.toLowerCase()
+          ),
           bans: [...prev.bans, ban],
         };
         const respect = computeRespect(
