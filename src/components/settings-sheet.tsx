@@ -1,12 +1,4 @@
-import type { AppSettings, RiotRegion } from "@/types";
-import { REGION_LABELS } from "@/types";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,9 +9,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
-import { Key, Globe, Users, Radio, MessageSquare, Ghost, UserX, Hash, AlertTriangle } from "lucide-react";
+import type { AppSettings, RiotRegion } from "@/types";
+import { REGION_LABELS } from "@/types";
+import {
+  AlertTriangle,
+  Bell,
+  BellOff,
+  Dices,
+  Ghost,
+  Globe,
+  Hash,
+  Key,
+  MessageSquare,
+  Radio,
+  Users,
+  UserX,
+} from "lucide-react";
 
 interface SettingsSheetProps {
   open: boolean;
@@ -37,17 +50,21 @@ export function SettingsSheet({
   hasResolutionError = false,
 }: SettingsSheetProps) {
   const regions = Object.entries(REGION_LABELS) as [RiotRegion, string][];
-  
+
   // Conditionally show the Manual ID field if:
   // 1. We are in debug mode
   // 2. The ID failed to resolve automatically
   // 3. There is ALREADY a manual ID saved (so it's reachable for changes)
   const isDebugMode = process.env.NEXT_PUBLIC_DEBUG === "true";
-  const showManualId = isDebugMode || hasResolutionError || !!settings.manualChatroomId;
+  const showManualId =
+    isDebugMode || hasResolutionError || !!settings.manualChatroomId;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md overflow-y-auto" id="settings-sheet">
+      <SheetContent
+        className="w-full sm:max-w-md overflow-y-auto"
+        id="settings-sheet"
+      >
         <SheetHeader>
           <SheetTitle className="text-lg">Ayarlar</SheetTitle>
           <SheetDescription>
@@ -74,9 +91,7 @@ export function SettingsSheet({
               type="password"
               placeholder="RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
               value={settings.riotApiKey}
-              onChange={(e) =>
-                onUpdateSettings({ riotApiKey: e.target.value })
-              }
+              onChange={(e) => onUpdateSettings({ riotApiKey: e.target.value })}
               className="font-mono text-xs"
             />
             <p className="text-[11px] text-muted-foreground">
@@ -123,9 +138,7 @@ export function SettingsSheet({
             </div>
             <Select
               value={String(settings.teamSize)}
-              onValueChange={(v) =>
-                onUpdateSettings({ teamSize: parseInt(v) })
-              }
+              onValueChange={(v) => onUpdateSettings({ teamSize: parseInt(v) })}
             >
               <SelectTrigger id="team-size-select" className="w-full">
                 <SelectValue />
@@ -175,13 +188,18 @@ export function SettingsSheet({
               <div className="space-y-4 bg-destructive/5 p-4 mx-5 rounded-lg border border-destructive/20">
                 <div className="flex items-center gap-2 text-destructive">
                   <AlertTriangle className="h-4 w-4" />
-                  <Label className="text-xs font-bold uppercase tracking-wider">Hata Ayıklama (Troubleshooting)</Label>
+                  <Label className="text-xs font-bold uppercase tracking-wider">
+                    Hata Ayıklama (Troubleshooting)
+                  </Label>
                 </div>
 
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Hash className="h-4 w-4 text-muted-foreground" />
-                    <Label htmlFor="manual-chatroom-id" className="text-xs font-medium">
+                    <Label
+                      htmlFor="manual-chatroom-id"
+                      className="text-xs font-medium"
+                    >
                       Manuel Chatroom ID
                     </Label>
                   </div>
@@ -190,14 +208,18 @@ export function SettingsSheet({
                     placeholder="Örn: 65286905"
                     value={settings.manualChatroomId}
                     onChange={(e) =>
-                      onUpdateSettings({ manualChatroomId: e.target.value.replace(/[^0-9]/g, "") })
+                      onUpdateSettings({
+                        manualChatroomId: e.target.value.replace(/[^0-9]/g, ""),
+                      })
                     }
                     className="text-xs bg-background/50 border-destructive/20 focus-visible:ring-destructive"
                   />
                   <p className="text-[10px] text-muted-foreground leading-relaxed">
-                    ID otomatik bulunamazsa bu alanı doldurun. 
+                    ID otomatik bulunamazsa bu alanı doldurun.
                     <br />
-                    <span className="text-destructive/80 italic">Kanalınız için bu ID: 65286905</span>
+                    <span className="text-destructive/80 italic">
+                      Kanalınız için bu ID: 65286905
+                    </span>
                   </p>
                 </div>
               </div>
@@ -249,11 +271,14 @@ export function SettingsSheet({
           <Separator />
 
           {/* Disable Riot API */}
-          <div className="space-y-3 mx-5 pb-10">
+          <div className="space-y-3 mx-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Ghost className="h-4 w-4 text-muted-foreground" />
-                <Label htmlFor="disable-riot-api" className="text-sm font-medium">
+                <Label
+                  htmlFor="disable-riot-api"
+                  className="text-sm font-medium"
+                >
                   Riot ID Zorunluluğunu Kaldır
                 </Label>
               </div>
@@ -265,6 +290,65 @@ export function SettingsSheet({
                 }
               />
             </div>
+          </div>
+
+          <Separator />
+
+          {/* Pick Animation Style */}
+          <div className="space-y-3 mx-5">
+            <div className="flex items-center gap-2">
+              <Dices className="h-4 w-4 text-muted-foreground" />
+              <Label className="text-sm font-medium">Çekim Animasyonu</Label>
+            </div>
+            <Select
+              value={settings.pickAnimationStyle ?? "classic"}
+              onValueChange={(v) =>
+                onUpdateSettings({
+                  pickAnimationStyle: v as "classic" | "list" | "spin" | "none",
+                })
+              }
+            >
+              <SelectTrigger id="pick-animation-select" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="classic">Kartlar</SelectItem>
+                <SelectItem value="list">Listeleme</SelectItem>
+                <SelectItem value="spin">Çarkıfelek</SelectItem>
+                <SelectItem value="none">Yok</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground">
+              Tek Çekim sırasında oyuncu seçim animasyonu türü.
+            </p>
+          </div>
+
+          <Separator />
+
+          {/* Toast Notifications */}
+          <div className="space-y-3 mx-5 pb-10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {settings.enableToasts !== false ? (
+                  <Bell className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <BellOff className="h-4 w-4 text-muted-foreground" />
+                )}
+                <Label htmlFor="enable-toasts" className="text-sm font-medium">
+                  Bildirimler (Toast)
+                </Label>
+              </div>
+              <Switch
+                id="enable-toasts"
+                checked={settings.enableToasts !== false}
+                onCheckedChange={(checked) =>
+                  onUpdateSettings({ enableToasts: checked })
+                }
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Kapatıldığında ekrandaki bildirim mesajları gösterilmez.
+            </p>
           </div>
         </div>
       </SheetContent>

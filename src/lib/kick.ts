@@ -139,3 +139,38 @@ export function connectToKickChat(
     onStatusChange?.(false);
   };
 }
+
+/**
+ * Sends a chat message to a Kick.com chatroom using the official REST API.
+ */
+export async function sendKickChatMessage(
+  chatroomId: number,
+  message: string,
+  accessToken: string
+): Promise<boolean> {
+  try {
+    const res = await fetch(`https://api.kick.com/public/v1/chats/${chatroomId}/messages`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({
+        content: message,
+        type: "bot",
+      }),
+    });
+
+    if (!res.ok) {
+      logger.error(`[Kick Chat] Failed to send message: ${res.status}`);
+      return false;
+    }
+
+    logger.log(`[Kick Chat] Successfully sent chat message to chatroom ${chatroomId}: "${message}"`);
+    return true;
+  } catch (err) {
+    logger.error("[Kick Chat] Send message failed:", err);
+    return false;
+  }
+}

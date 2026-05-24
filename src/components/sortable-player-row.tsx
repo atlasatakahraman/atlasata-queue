@@ -52,6 +52,9 @@ interface SortablePlayerRowProps {
   onEditPlayer?: (player: QueuePlayer) => void;
   joinTimeFormatted: string;
   joinTimeFull: string;
+  onModerate?: (kickUsername: string, actionType: "warning" | "punishment" | "ban") => void;
+  isOverlay?: boolean;
+  cellWidths?: number[];
 }
 
 function SortablePlayerRowInner({
@@ -68,6 +71,9 @@ function SortablePlayerRowInner({
   onEditPlayer,
   joinTimeFormatted,
   joinTimeFull,
+  onModerate,
+  isOverlay = false,
+  cellWidths,
 }: SortablePlayerRowProps) {
   const {
     attributes,
@@ -76,13 +82,15 @@ function SortablePlayerRowInner({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: player.id });
+  } = useSortable({ id: player.id, disabled: isOverlay });
 
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    ...(isDragging ? { opacity: 0.4, zIndex: 50 } : {}),
-  };
+  const style: React.CSSProperties = isOverlay
+    ? {}
+    : {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        ...(isDragging ? { opacity: 0.4, zIndex: 50 } : {}),
+      };
 
   return (
     <PlayerContextMenu
@@ -95,9 +103,11 @@ function SortablePlayerRowInner({
       isTeamsCreated={isTeamsCreated}
       onCreateTeamsRequest={onCreateTeamsRequest}
       onEditPlayer={onEditPlayer}
+      onModerate={onModerate}
     >
       <TableRow
-        ref={setNodeRef}
+        id={`player-row-${player.id}`}
+        ref={isOverlay ? undefined : setNodeRef}
         style={style}
         className={`group transition-colors duration-150 border-border/30 cursor-default ${
           isNew ? "animate-in fade-in slide-in-from-bottom-1" : ""
@@ -106,13 +116,13 @@ function SortablePlayerRowInner({
         } ${isDragging ? "dragging" : ""}`}
       >
         {/* Drag handle + index */}
-        <TableCell className="text-center w-12">
+        <TableCell className="text-center w-12" style={cellWidths ? { width: cellWidths[0] } : undefined}>
           <div className="flex items-center justify-center gap-1">
             <button
               className="touch-none cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-60 transition-opacity duration-150 focus-visible:opacity-100 shrink-0 p-0.5 rounded hover:bg-muted -ml-1 drag-handle"
               aria-label="Sırayı değiştirmek için sürükle"
-              {...attributes}
-              {...listeners}
+              {...(isOverlay ? {} : attributes)}
+              {...(isOverlay ? {} : listeners)}
             >
               <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
             </button>
@@ -123,7 +133,7 @@ function SortablePlayerRowInner({
         </TableCell>
 
         {/* Player */}
-        <TableCell>
+        <TableCell style={cellWidths ? { width: cellWidths[1] } : undefined}>
           <PlayerCard player={player}>
             <button className="flex text-left items-center gap-3 w-full min-w-[200px] outline-none group-focus-visible:ring-2 rounded-sm ring-ring">
               <div className="relative">
@@ -177,14 +187,14 @@ function SortablePlayerRowInner({
         </TableCell>
 
         {/* Kick Username */}
-        <TableCell>
+        <TableCell style={cellWidths ? { width: cellWidths[2] } : undefined}>
           <span className="text-xs text-muted-foreground">
             {player.kickUsername}
           </span>
         </TableCell>
 
         {/* Rank */}
-        <TableCell>
+        <TableCell style={cellWidths ? { width: cellWidths[3] } : undefined}>
           {player.isLoading ? (
             <Skeleton className="h-5 w-16" />
           ) : player.hasError ? (
@@ -218,7 +228,7 @@ function SortablePlayerRowInner({
         </TableCell>
 
         {/* Win Rate */}
-        <TableCell className="text-center">
+        <TableCell className="text-center" style={cellWidths ? { width: cellWidths[4] } : undefined}>
           {player.isLoading ? (
             <Skeleton className="mx-auto h-4 w-10" />
           ) : player.hasError ? (
@@ -237,7 +247,7 @@ function SortablePlayerRowInner({
         </TableCell>
 
         {/* Join Time */}
-        <TableCell className="text-center">
+        <TableCell className="text-center" style={cellWidths ? { width: cellWidths[5] } : undefined}>
           <Tooltip>
             <TooltipTrigger>
               <span className="flex items-center justify-center gap-1 text-[11px] text-muted-foreground">
@@ -252,7 +262,7 @@ function SortablePlayerRowInner({
         </TableCell>
 
         {/* Remove */}
-        <TableCell>
+        <TableCell style={cellWidths ? { width: cellWidths[6] } : undefined}>
           <Button
             variant="ghost"
             size="icon"
@@ -276,6 +286,8 @@ export const SortablePlayerRow = React.memo(
     if (prev.isNew !== next.isNew) return false;
     if (prev.isTeamsCreated !== next.isTeamsCreated) return false;
     if (prev.joinTimeFormatted !== next.joinTimeFormatted) return false;
+    if (prev.isOverlay !== next.isOverlay) return false;
+    if (prev.cellWidths !== next.cellWidths) return false;
 
     const p = prev.player;
     const n = next.player;

@@ -1,12 +1,10 @@
 "use client";
 
-import { signOut, useSession } from "next-auth/react";
-import { ThemeToggle } from "./theme-toggle";
-import { GithubButton } from "./github-button";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { useCallback, useRef } from "react";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,19 +13,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  Swords,
-  LogOut,
-  Settings,
-  Wifi,
-  WifiOff,
-  Users,
-} from "lucide-react";
+import { LogOut, Settings, Users, Wifi, WifiOff } from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
+import { toast } from "sonner";
+import { GithubButton } from "./github-button";
+import { ThemeToggle } from "./theme-toggle";
 
 interface HeaderProps {
   isConnected: boolean;
@@ -46,17 +42,58 @@ export function Header({
 }: HeaderProps) {
   const { data: session } = useSession();
 
+  // Easter egg: click logo 5 times quickly
+  const logoClickCount = useRef(0);
+  const logoClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleLogoClick = useCallback(() => {
+    logoClickCount.current++;
+    if (logoClickTimer.current) clearTimeout(logoClickTimer.current);
+    if (logoClickCount.current >= 5) {
+      logoClickCount.current = 0;
+      toast.error("atlasata", {
+        description: "Çok iyi bir logo bence de..",
+        duration: 4000,
+      });
+    } else {
+      logoClickTimer.current = setTimeout(() => {
+        logoClickCount.current = 0;
+      }, 1500);
+    }
+  }, []);
+
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/50 glass">
+    <header className="sticky top-0 z-40 w-full border-b border-border/50 glass-warm animate-slide-down-fade">
       <div className="mx-auto flex h-14 max-w-screen-2xl items-center justify-between gap-4 px-4 sm:px-6">
         {/* Left — Brand */}
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/20">
-            <Swords className="h-4 w-4 text-primary" />
+          {/* Theme-aware logo: light mode = black logo, dark mode = white logo */}
+          <div
+            className="relative h-9 w-9 shrink-0 cursor-pointer"
+            onClick={handleLogoClick}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/TheAtlasB2048.png"
+              alt="TheAtlas"
+              width={36}
+              height={36}
+              className="absolute inset-0 w-full h-full block dark:hidden object-cover rounded-lg"
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/TheAtlasW2048.png"
+              alt="TheAtlas"
+              width={36}
+              height={36}
+              className="absolute inset-0 w-full h-full hidden dark:block object-cover rounded-lg"
+            />
           </div>
           <div className="flex items-center gap-2">
-            <h1 className="text-sm font-semibold tracking-tight sm:text-base">
-              AtlasAta Queue
+            <h1
+              className="font-heading text-base font-semibold tracking-tight sm:text-lg"
+              style={{ letterSpacing: "-0.02em" }}
+            >
+              TheAtlas — Queue
             </h1>
             <Badge
               variant="secondary"
@@ -125,7 +162,7 @@ export function Header({
             <TooltipContent>
               <p>
                 {isLive
-                  ? streamTitle ?? "Yayın devam ediyor"
+                  ? (streamTitle ?? "Yayın devam ediyor")
                   : "Yayın kapalı"}
               </p>
             </TooltipContent>
@@ -135,9 +172,7 @@ export function Header({
 
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Users className="h-3.5 w-3.5" />
-            <span>
-              {playerCount} oyuncu
-            </span>
+            <span>{playerCount} oyuncu</span>
           </div>
         </div>
 
@@ -193,9 +228,7 @@ export function Header({
                   <p className="text-sm font-medium">
                     {session?.user?.name ?? "Kullanıcı"}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Kick Hesabı
-                  </p>
+                  <p className="text-xs text-muted-foreground">Kick Hesabı</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

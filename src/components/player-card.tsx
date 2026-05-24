@@ -1,8 +1,5 @@
 "use client";
 
-import type { QueuePlayer } from "@/types";
-import { TIER_LABELS } from "@/types";
-import { PROFILE_ICON_URL } from "@/lib/constants";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,20 +7,22 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
+import { PROFILE_ICON_URL } from "@/lib/constants";
+import type { QueuePlayer } from "@/types";
+import { TIER_LABELS } from "@/types";
 import {
-  Trophy,
-  Swords,
-  TrendingUp,
-  TrendingDown,
-  Shield,
-  Gamepad2,
-  Copy,
   Check,
+  Copy,
+  Gamepad2,
+  Shield,
+  TrendingDown,
+  TrendingUp,
 } from "lucide-react";
-import { useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import { ContextMenuOpenContext } from "./player-context-menu";
 
 interface PlayerCardProps {
   player: QueuePlayer;
@@ -47,7 +46,7 @@ function getRankColor(tier?: string): string {
 }
 
 function getRankBadgeVariant(
-  tier?: string
+  tier?: string,
 ): "default" | "secondary" | "destructive" | "outline" {
   if (!tier || tier === "UNRANKED") return "outline";
   if (["MASTER", "GRANDMASTER", "CHALLENGER"].includes(tier)) return "default";
@@ -58,6 +57,8 @@ export function PlayerCard({ player, children }: PlayerCardProps) {
   const winRate = player.winRate ?? 0;
   const isWinRateGood = winRate >= 50;
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const isContextMenuOpen = useContext(ContextMenuOpenContext);
+  const [hoverCardOpen, setHoverCardOpen] = useState(false);
 
   const copyToClipboard = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
@@ -65,12 +66,31 @@ export function PlayerCard({ player, children }: PlayerCardProps) {
     setTimeout(() => setCopiedField(null), 1500);
   };
 
+  useEffect(() => {
+    if (isContextMenuOpen) {
+      setHoverCardOpen(false);
+    }
+  }, [isContextMenuOpen]);
+
+  const handleOpenChange = (open: boolean) => {
+    if (open && isContextMenuOpen) {
+      setHoverCardOpen(false);
+    } else {
+      setHoverCardOpen(open);
+    }
+  };
+
   return (
-    <HoverCard openDelay={200} closeDelay={100}>
+    <HoverCard
+      openDelay={1500}
+      closeDelay={0}
+      open={hoverCardOpen}
+      onOpenChange={handleOpenChange}
+    >
       <HoverCardTrigger asChild>{children}</HoverCardTrigger>
       <HoverCardContent
         className="w-72 p-0 overflow-hidden"
-        side="right"
+        side="bottom"
         align="start"
       >
         {player.isLoading ? (
@@ -107,13 +127,17 @@ export function PlayerCard({ player, children }: PlayerCardProps) {
                     onClick={() =>
                       copyToClipboard(
                         `${player.riotGameName}#${player.riotTagLine}`,
-                        "riot"
+                        "riot",
                       )
                     }
                     title="Riot ID'yi kopyala"
                   >
-                    <span className="truncate max-w-[130px]">{player.riotGameName}</span>
-                    <span className="group-hover/copy:text-primary text-muted-foreground">#{player.riotTagLine}</span>
+                    <span className="truncate max-w-[130px]">
+                      {player.riotGameName}
+                    </span>
+                    <span className="group-hover/copy:text-primary text-muted-foreground">
+                      #{player.riotTagLine}
+                    </span>
                     {copiedField === "riot" ? (
                       <Check className="h-3 w-3 text-success shrink-0" />
                     ) : (
@@ -121,9 +145,11 @@ export function PlayerCard({ player, children }: PlayerCardProps) {
                     )}
                   </button>
                 </div>
-                {player.summonerLevel && <Badge variant="outline" className="text-[10px] shrink-0">
-                  Sv. {player.summonerLevel}
-                </Badge>}
+                {player.summonerLevel && (
+                  <Badge variant="outline" className="text-[10px] shrink-0">
+                    Sv. {player.summonerLevel}
+                  </Badge>
+                )}
               </div>
             </div>
 
@@ -143,7 +169,7 @@ export function PlayerCard({ player, children }: PlayerCardProps) {
                     {player.rankedTier &&
                       player.rankedTier !== "UNRANKED" &&
                       !["MASTER", "GRANDMASTER", "CHALLENGER"].includes(
-                        player.rankedTier
+                        player.rankedTier,
                       ) &&
                       ` ${player.rankedDivision}`}
                   </span>
@@ -186,9 +212,7 @@ export function PlayerCard({ player, children }: PlayerCardProps) {
               <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                 <button
                   className="flex items-center gap-1 hover:text-primary transition-colors group/kickcopy"
-                  onClick={() =>
-                    copyToClipboard(player.kickUsername, "kick")
-                  }
+                  onClick={() => copyToClipboard(player.kickUsername, "kick")}
                   title="Kick adını kopyala"
                 >
                   <Gamepad2 className="h-3 w-3" />

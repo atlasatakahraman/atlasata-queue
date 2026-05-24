@@ -7,6 +7,7 @@ import { DEFAULT_SETTINGS } from "@/lib/constants";
 
 export function useSettings() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Load from localStorage on client side mount to avoid hydration mismatch
   useEffect(() => {
@@ -15,7 +16,9 @@ export function useSettings() {
       if (stored) {
         setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(stored) });
       }
-    } catch { }
+    } catch { } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   // Save to localStorage whenever settings change
@@ -54,5 +57,6 @@ export function useSettings() {
     updateSettings,
     setRegion,
     isConfigured,
+    isLoading,
   };
 }

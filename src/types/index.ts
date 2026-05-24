@@ -97,6 +97,8 @@ export interface AppSettings {
   afkCommand: string;
   disableRiotApi?: boolean;
   manualChatroomId?: string;
+  enableToasts?: boolean;
+  pickAnimationStyle?: "classic" | "list" | "spin" | "none";
 }
 
 export interface KickChatMessage {

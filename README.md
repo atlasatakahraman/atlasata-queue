@@ -10,7 +10,7 @@
 [![Riot Games API](https://img.shields.io/badge/Riot_Games-API-eb0029?style=for-the-badge&logo=riotgames&logoColor=white)](https://developer.riotgames.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-success?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
-*Özel "Şamata" oyunları için tasarlanmış sade ve odaklı bir dashboard — chat'teki ilk `!sıra` komutundan takımların oluşturulmasına kadar lobi yönetimini tamamen üstlenir.*
+_Özel "Şamata" oyunları için tasarlanmış sade ve odaklı bir dashboard — chat'teki ilk `!sıra` komutundan takımların oluşturulmasına kadar lobi yönetimini tamamen üstlenir._
 
 [Hata Bildir](https://github.com/atlasatakahraman/atlasata-queue/issues) · [Özellik İste](https://github.com/atlasatakahraman/atlasata-queue/issues)
 
@@ -108,15 +108,15 @@ Kick'in Pusher uyumlu WebSocket altyapısını kullanarak sohbet mesajlarını d
 
 ## Teknoloji Yığını
 
-| Katman | Teknoloji |
-|---|---|
-| Framework | Next.js (Latest, App Router) |
-| UI Bileşenleri | shadcn/ui |
-| Stil | Tailwind CSS |
-| Kimlik Doğrulama | Auth.js (NextAuth v5) |
-| Chat | Kick WebSocket (Pusher) |
-| Oyuncu Verisi | Riot Games REST API |
-| Çalışma Ortamı | Bun |
+| Katman           | Teknoloji                    |
+| ---------------- | ---------------------------- |
+| Framework        | Next.js (Latest, App Router) |
+| UI Bileşenleri   | shadcn/ui                    |
+| Stil             | Tailwind CSS                 |
+| Kimlik Doğrulama | Auth.js (NextAuth v5)        |
+| Chat             | Kick WebSocket (Pusher)      |
+| Oyuncu Verisi    | Riot Games REST API          |
+| Çalışma Ortamı   | Bun                          |
 
 ---
 
@@ -134,7 +134,7 @@ Her türlü katkı memnuniyetle karşılanır.
 
 ## Lisans
 
-AGPL-3.0 Lisansı kapsamında dağıtılmaktadır. Ayrıntılar için [`LICENSE`](LICENSE) dosyasına bakın.
+AAKNCL-1.0 Lisansı kapsamında dağıtılmaktadır. Ayrıntılar için [`LICENSE`](LICENSE) dosyasına bakın.
 
 ---
 

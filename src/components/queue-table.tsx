@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import type { QueuePlayer } from "@/types";
 import {
   DndContext,
@@ -26,7 +27,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { SortablePlayerRow } from "./sortable-player-row";
 import { Shield } from "lucide-react";
 
@@ -43,6 +43,7 @@ interface QueueTableProps {
   onCreateTeamsRequest?: (playerId: string, teamId: "A" | "B") => void;
   onManualAddRequest?: () => void;
   onEditPlayer?: (player: QueuePlayer) => void;
+  onModerate?: (kickUsername: string, actionType: "warning" | "punishment" | "ban") => void;
 }
 
 export function QueueTable({
@@ -57,10 +58,13 @@ export function QueueTable({
   isTeamsCreated = false,
   onCreateTeamsRequest,
   onEditPlayer,
+  onModerate,
 }: QueueTableProps) {
   // Track "seen" IDs so mount animation only fires once
   const seenIdsRef = useRef<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [draggedWidth, setDraggedWidth] = useState<number | null>(null);
+  const [draggedCellWidths, setDraggedCellWidths] = useState<number[]>([]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -73,11 +77,20 @@ export function QueueTable({
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(String(event.active.id));
+    const element = document.getElementById(`player-row-${event.active.id}`);
+    if (element) {
+      setDraggedWidth(element.getBoundingClientRect().width);
+      const cells = element.querySelectorAll("td");
+      const widths = Array.from(cells).map((cell) => cell.getBoundingClientRect().width);
+      setDraggedCellWidths(widths);
+    }
   }, []);
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       setActiveId(null);
+      setDraggedWidth(null);
+      setDraggedCellWidths([]);
       const { active, over } = event;
       if (over && active.id !== over.id) {
         onReorder?.(String(active.id), String(over.id));
@@ -88,6 +101,8 @@ export function QueueTable({
 
   const handleDragCancel = useCallback(() => {
     setActiveId(null);
+    setDraggedWidth(null);
+    setDraggedCellWidths([]);
   }, []);
 
   // Pre-compute time strings once per render (not per row)
@@ -115,9 +130,9 @@ export function QueueTable({
 
   if (players.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center h-[calc(100vh-22rem)] min-h-[300px]">
-        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/50">
-          <Shield className="h-8 w-8 text-muted-foreground/50" />
+      <div className="flex flex-col items-center justify-center py-10 text-center">
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-muted/50">
+          <Shield className="h-6 w-6 text-muted-foreground/50" />
         </div>
         <h3 className="text-sm font-medium text-muted-foreground">
           Sırada henüz kimse yok
@@ -143,10 +158,6 @@ export function QueueTable({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <ScrollArea
-        className="h-[calc(100vh-22rem)] min-h-[300px]"
-        id="queue-scroll-area"
-      >
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent border-border/50">
@@ -184,39 +195,48 @@ export function QueueTable({
                     onEditPlayer={onEditPlayer}
                     joinTimeFormatted={timeData[index].formatted}
                     joinTimeFull={timeData[index].full}
+                    onModerate={onModerate}
                   />
                 );
               })}
             </SortableContext>
           </TableBody>
         </Table>
-      </ScrollArea>
 
       {/* Drag overlay — semi-transparent ghost */}
-      <DragOverlay dropAnimation={null}>
-        {activePlayer && activeIndex >= 0 ? (
-          <div className="drag-overlay rounded-lg">
-            <Table>
-              <TableBody>
-                <SortablePlayerRow
-                  player={activePlayer}
-                  index={activeIndex}
-                  isNew={false}
-                  disableRiotApi={disableRiotApi}
-                  onRemovePlayer={onRemovePlayer}
-                  onUpdatePlayer={onUpdatePlayer}
-                  onAddToTeam={onAddToTeam}
-                  onRemoveFromTeam={onRemoveFromTeam}
-                  isTeamsCreated={isTeamsCreated}
-                  onCreateTeamsRequest={onCreateTeamsRequest}
-                  joinTimeFormatted={timeData[activeIndex].formatted}
-                  joinTimeFull={timeData[activeIndex].full}
-                />
-              </TableBody>
-            </Table>
-          </div>
-        ) : null}
-      </DragOverlay>
+      {activePlayer && activeIndex >= 0 && typeof document !== "undefined"
+        ? createPortal(
+            <DragOverlay dropAnimation={null}>
+              <div 
+                className="drag-overlay rounded-lg overflow-hidden"
+                style={draggedWidth ? { width: draggedWidth } : undefined}
+              >
+                <Table className="w-full" style={{ tableLayout: "fixed" }}>
+                  <TableBody>
+                    <SortablePlayerRow
+                      player={activePlayer}
+                      index={activeIndex}
+                      isNew={false}
+                      disableRiotApi={disableRiotApi}
+                      onRemovePlayer={onRemovePlayer}
+                      onUpdatePlayer={onUpdatePlayer}
+                      onAddToTeam={onAddToTeam}
+                      onRemoveFromTeam={onRemoveFromTeam}
+                      isTeamsCreated={isTeamsCreated}
+                      onCreateTeamsRequest={onCreateTeamsRequest}
+                      joinTimeFormatted={timeData[activeIndex].formatted}
+                      joinTimeFull={timeData[activeIndex].full}
+                      onModerate={onModerate}
+                      isOverlay={true}
+                      cellWidths={draggedCellWidths}
+                    />
+                  </TableBody>
+                </Table>
+              </div>
+            </DragOverlay>,
+            document.body
+          )
+        : null}
     </DndContext>
   );
 }

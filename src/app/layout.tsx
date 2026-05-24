@@ -1,21 +1,58 @@
+import { Providers } from "@/components/providers";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { Geist, Geist_Mono } from "next/font/google";
-import { Providers } from "@/components/providers";
 import "./globals.css";
 
-const adwaitaSans = localFont({
-  variable: "--font-adwaita-sans",
-  src: "../../fonts/AdwaitaSans-Regular.woff2"
-})
+const anthropicSans = localFont({
+  variable: "--font-anthropic-sans",
+  src: [
+    {
+      path: "./fonts/Anthropic-Sans-Regular-Web.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "./fonts/Anthropic-Sans-Regular-Italic-Web.woff2",
+      weight: "400",
+      style: "italic",
+    },
+  ],
+});
 
-const adwaitaMono = localFont({
-  variable: "--font-adwaita-mono",
-  src: "../../fonts/AdwaitaMono-Regular.woff2"
-})
+const anthropicSerif = localFont({
+  variable: "--font-anthropic-serif",
+  src: [
+    {
+      path: "./fonts/Anthropic-Serif-Regular-Web.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "./fonts/Anthropic-Seris-Regular-Italic-Web.woff2",
+      weight: "400",
+      style: "italic",
+    },
+  ],
+});
+
+const anthropicMono = localFont({
+  variable: "--font-anthropic-mono",
+  src: [
+    {
+      path: "./fonts/Anthropic-Mono-Variable-Regular.woff2",
+      weight: "100 900",
+      style: "normal",
+    },
+    {
+      path: "./fonts/Anthropic-Mono-Variable-Regular-Italic.woff2",
+      weight: "100 900",
+      style: "italic",
+    },
+  ],
+});
 
 export const metadata: Metadata = {
-  title: "AtlasAta Queue — Şamata 5v5 Lobby Yönetimi",
+  title: "TheAtlas — Queue",
   description:
     "League of Legends Şamata (ARAM Mayhem) 5v5 özel lobi yönetim paneli. Kick canlı yayın sohbetinden sıraya katılın.",
   keywords: [
@@ -25,9 +62,12 @@ export const metadata: Metadata = {
     "Queue",
     "Lobby",
     "Kick",
-    "atlasata",
+    "Atlas Ata KAHRAMAN",
+    "TheAtlas",
   ],
-  authors: [{ name: "atlasata", url: "https://github.com/atlasatakahraman" }],
+  authors: [
+    { name: "Atlas Ata KAHRAMAN", url: "https://github.com/atlasatakahraman" },
+  ],
 };
 
 export default function RootLayout({
@@ -38,7 +78,7 @@ export default function RootLayout({
   return (
     <html
       lang="tr"
-      className={`${adwaitaSans.variable} ${adwaitaMono.variable} h-full antialiased`}
+      className={`${anthropicSans.variable} ${anthropicSerif.variable} ${anthropicMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">

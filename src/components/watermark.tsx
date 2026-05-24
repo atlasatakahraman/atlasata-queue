@@ -1,11 +1,40 @@
 "use client";
 
+import { useCallback, useRef, useState } from "react";
+
 export function Watermark() {
+  const [revealed, setRevealed] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMouseEnter = useCallback(() => {
+    timerRef.current = setTimeout(() => {
+      setRevealed(true);
+    }, 3000);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    // Keep revealed once found
+  }, []);
+
   return (
-    <div className="fixed bottom-4 right-4 z-50 select-none pointer-events-none">
-      <span className="text-xs font-medium tracking-[0.35em] text-muted-foreground/25 dark:text-muted-foreground/15">
-        atlasata
+    <footer
+      className="py-3 text-center text-[10px] text-muted-foreground/50 tracking-wider uppercase cursor-default select-none"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <span className="transition-all duration-700">
+        {revealed ? (
+          <span className="animate-in fade-in duration-1000">
+            * Hey! — Sen de firarda mısın? *
+          </span>
+        ) : (
+          "Atlas Ata KAHRAMAN"
+        )}
       </span>
-    </div>
+    </footer>
   );
 }

@@ -193,49 +193,68 @@ export function useQueue(isLive: boolean = false) {
       const minPlayers = onlyInGame ? 3 : teamSize * 2;
       if (activePlayers.length < minPlayers) return null;
 
-      let teamAPlayers: QueuePlayer[] = [];
-      let teamBPlayers: QueuePlayer[] = [];
-      
+      // Crypto-strength random number [0, max)
+      const cryptoRand = (max: number) => {
+        const arr = new Uint32Array(1);
+        crypto.getRandomValues(arr);
+        return arr[0] % max;
+      };
+
+      // Fisher-Yates shuffle with crypto random
+      const cryptoShuffle = <T,>(arr: T[]): T[] => {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = cryptoRand(i + 1);
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      };
+
+      // Build previous team ID sets for dedup
       let prevAIds = new Set<string>();
       let prevBIds = new Set<string>();
-      if (onlyInGame && teamResult) {
+      if (teamResult) {
         prevAIds = new Set(teamResult.teamA.players.map(p => p.id));
         prevBIds = new Set(teamResult.teamB.players.map(p => p.id));
       }
 
+      // Check if a split is identical to previous (either direction)
+      const isSameAsPrevious = (teamA: QueuePlayer[], teamB: QueuePlayer[]) => {
+        if (!teamResult) return false;
+        const aIds = new Set(teamA.map(p => p.id));
+        const bIds = new Set(teamB.map(p => p.id));
+        // Same split or mirror split
+        const sameForward = aIds.size === prevAIds.size && [...aIds].every(id => prevAIds.has(id));
+        const sameMirror = aIds.size === prevBIds.size && [...aIds].every(id => prevBIds.has(id));
+        return sameForward || sameMirror;
+      };
+
+      let teamAPlayers: QueuePlayer[] = [];
+      let teamBPlayers: QueuePlayer[] = [];
       let attempts = 0;
-      const MAX_ATTEMPTS = 50;
+      const MAX_ATTEMPTS = 100;
 
       while (attempts < MAX_ATTEMPTS) {
         attempts++;
-        const shuffled = [...activePlayers];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
+        const shuffled = cryptoShuffle(activePlayers);
 
         if (onlyInGame) {
           let mid = Math.ceil(shuffled.length / 2);
-          if (shuffled.length % 2 !== 0 && Math.random() > 0.5) {
+          if (shuffled.length % 2 !== 0 && cryptoRand(2) === 1) {
             mid = Math.floor(shuffled.length / 2);
           }
           teamAPlayers = shuffled.slice(0, mid);
-          teamBPlayers = shuffled.slice(mid, shuffled.length);
-
-          // Force alliances to break if possible
-          if (teamResult) {
-            const matchA = teamAPlayers.length === prevAIds.size && teamAPlayers.every(p => prevAIds.has(p.id));
-            const matchB = teamAPlayers.length === prevBIds.size && teamAPlayers.every(p => prevBIds.has(p.id));
-            if (matchA || matchB) {
-              continue; // exact same team splits, try again!
-            }
-          }
+          teamBPlayers = shuffled.slice(mid);
         } else {
           teamAPlayers = shuffled.slice(0, teamSize);
           teamBPlayers = shuffled.slice(teamSize, teamSize * 2);
         }
-        
-        break; // found a good arrangement!
+
+        // Only retry if it's the exact same composition as before
+        if (activePlayers.length > 2 && isSameAsPrevious(teamAPlayers, teamBPlayers)) {
+          continue;
+        }
+        break;
       }
 
       const result: TeamResult = {
@@ -271,7 +290,9 @@ export function useQueue(isLive: boolean = false) {
   const pickRandomPlayer = useCallback((onlyInGame: boolean = false): QueuePlayer | null => {
     const activePlayers = players.filter(p => !p.isAway && (!onlyInGame || p.isInGame));
     if (activePlayers.length === 0) return null;
-    const index = Math.floor(Math.random() * activePlayers.length);
+    const arr = new Uint32Array(1);
+    crypto.getRandomValues(arr);
+    const index = arr[0] % activePlayers.length;
     return activePlayers[index];
   }, [players]);
 
@@ -363,6 +384,13 @@ export function useQueue(isLive: boolean = false) {
   const movePlayerBetweenTeams = useCallback((playerId: string, targetTeamId: "A" | "B", teamSize: number) => {
     const targetPlayer = players.find(p => p.id === playerId);
 
+    if (targetPlayer?.isAway) {
+      toast.error("İşlem Başarısız", {
+        description: `${targetPlayer.kickUsername} uzağa alındığı için takıma eklenemez.`
+      });
+      return;
+    }
+
     if (teamResult) {
       const targetTeam = targetTeamId === "A" ? teamResult.teamA : teamResult.teamB;
       const alreadyInTeam = targetTeam.players.some(p => p.id === playerId);
@@ -382,18 +410,24 @@ export function useQueue(isLive: boolean = false) {
 
     setTeamResult((prev) => {
       if (!prev) return prev;
-      const playerToMove = prev.teamA.players.find(p => p.id === playerId) || prev.teamB.players.find(p => p.id === playerId);
+      const playerToMove = prev.teamA.players.find(p => p.id === playerId) || 
+                           prev.teamB.players.find(p => p.id === playerId) || 
+                           (targetPlayer ? { ...targetPlayer, isInGame: true } : undefined);
       if (!playerToMove) return prev;
 
       const filteredA = prev.teamA.players.filter(p => p.id !== playerId);
       const filteredB = prev.teamB.players.filter(p => p.id !== playerId);
 
+      const updatedPlayer = { ...playerToMove, isInGame: true };
+
       return {
         ...prev,
-        teamA: { ...prev.teamA, players: targetTeamId === "A" ? [...filteredA, playerToMove] : filteredA },
-        teamB: { ...prev.teamB, players: targetTeamId === "B" ? [...filteredB, playerToMove] : filteredB }
+        teamA: { ...prev.teamA, players: targetTeamId === "A" ? [...filteredA, updatedPlayer] : filteredA },
+        teamB: { ...prev.teamB, players: targetTeamId === "B" ? [...filteredB, updatedPlayer] : filteredB }
       };
     });
+
+    setPlayers((prev) => prev.map(p => p.id === playerId ? { ...p, isInGame: true } : p));
   }, [players, teamResult]);
 
   const clearTeams = useCallback(() => {

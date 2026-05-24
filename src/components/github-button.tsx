@@ -32,7 +32,7 @@ export function GithubButton() {
           id="github-button"
         >
           <a
-            href="https://github.com/atlasatakahraman"
+            href="https://github.com/atlasatakahraman/TheAtlas-Queue"
             target="_blank"
             rel="noopener noreferrer"
           >
