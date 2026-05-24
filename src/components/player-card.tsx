@@ -83,7 +83,7 @@ export function PlayerCard({ player, children }: PlayerCardProps) {
   return (
     <HoverCard
       openDelay={1500}
-      closeDelay={0}
+      closeDelay={100}
       open={hoverCardOpen}
       onOpenChange={handleOpenChange}
     >

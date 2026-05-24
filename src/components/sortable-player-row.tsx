@@ -1,24 +1,24 @@
 "use client";
 
-import React from "react";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import type { QueuePlayer } from "@/types";
-import { TIER_LABELS } from "@/types";
-import { PROFILE_ICON_URL } from "@/lib/constants";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TableCell, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TableCell, TableRow } from "@/components/ui/table";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { PROFILE_ICON_URL } from "@/lib/constants";
+import type { QueuePlayer } from "@/types";
+import { TIER_LABELS } from "@/types";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Clock, GripVertical, X } from "lucide-react";
+import React from "react";
 import { PlayerCard } from "./player-card";
 import { PlayerContextMenu } from "./player-context-menu";
-import { X, Clock, GripVertical } from "lucide-react";
 
 function getRankColorClass(tier?: string): string {
   const colors: Record<string, string> = {
@@ -52,7 +52,10 @@ interface SortablePlayerRowProps {
   onEditPlayer?: (player: QueuePlayer) => void;
   joinTimeFormatted: string;
   joinTimeFull: string;
-  onModerate?: (kickUsername: string, actionType: "warning" | "punishment" | "ban") => void;
+  onModerate?: (
+    kickUsername: string,
+    actionType: "warning" | "punishment" | "ban",
+  ) => void;
   isOverlay?: boolean;
   cellWidths?: number[];
 }
@@ -116,7 +119,10 @@ function SortablePlayerRowInner({
         } ${isDragging ? "dragging" : ""}`}
       >
         {/* Drag handle + index */}
-        <TableCell className="text-center w-12" style={cellWidths ? { width: cellWidths[0] } : undefined}>
+        <TableCell
+          className="text-center w-12"
+          style={cellWidths ? { width: cellWidths[0] } : undefined}
+        >
           <div className="flex items-center justify-center gap-1">
             <button
               className="touch-none cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-60 transition-opacity duration-150 focus-visible:opacity-100 shrink-0 p-0.5 rounded hover:bg-muted -ml-1 drag-handle"
@@ -156,7 +162,7 @@ function SortablePlayerRowInner({
               </div>
               <div className="flex-1 min-w-0 flex flex-col justify-center">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold tracking-tight truncate max-w-[140px] group-hover:text-primary transition-colors">
+                  <p className="text-sm font-semibold tracking-tight truncate max-w-[240px] group-hover:text-primary transition-colors">
                     {player.riotGameName}
                   </p>
                   {player.isAway && (
@@ -212,13 +218,13 @@ function SortablePlayerRowInner({
             <Badge
               variant="outline"
               className={`text-[10px] font-medium flex justify-center w-16 ${getRankColorClass(
-                player.rankedTier
+                player.rankedTier,
               )}`}
             >
               {TIER_LABELS[player.rankedTier]}
               {player.rankedTier !== "UNRANKED" &&
                 !["MASTER", "GRANDMASTER", "CHALLENGER"].includes(
-                  player.rankedTier
+                  player.rankedTier,
                 ) &&
                 ` ${player.rankedDivision}`}
             </Badge>
@@ -228,7 +234,10 @@ function SortablePlayerRowInner({
         </TableCell>
 
         {/* Win Rate */}
-        <TableCell className="text-center" style={cellWidths ? { width: cellWidths[4] } : undefined}>
+        <TableCell
+          className="text-center"
+          style={cellWidths ? { width: cellWidths[4] } : undefined}
+        >
           {player.isLoading ? (
             <Skeleton className="mx-auto h-4 w-10" />
           ) : player.hasError ? (
@@ -247,7 +256,10 @@ function SortablePlayerRowInner({
         </TableCell>
 
         {/* Join Time */}
-        <TableCell className="text-center" style={cellWidths ? { width: cellWidths[5] } : undefined}>
+        <TableCell
+          className="text-center"
+          style={cellWidths ? { width: cellWidths[5] } : undefined}
+        >
           <Tooltip>
             <TooltipTrigger>
               <span className="flex items-center justify-center gap-1 text-[11px] text-muted-foreground">
@@ -306,7 +318,7 @@ export const SortablePlayerRow = React.memo(
       p.isAway === n.isAway &&
       p.isInGame === n.isInGame
     );
-  }
+  },
 );
 
 SortablePlayerRow.displayName = "SortablePlayerRow";
