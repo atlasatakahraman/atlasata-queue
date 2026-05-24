@@ -1,6 +1,6 @@
 <div align="center">
 
-# AtlasAta Queue
+# TheAtlas — Queue
 
 **Yayıncılar için Özel 5v5 Lobi & Sıra Yönetim Sistemi**
 
