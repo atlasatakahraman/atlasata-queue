@@ -387,11 +387,14 @@ export function Dashboard() {
       );
 
       if (existingPlayer) {
-        // If the player is away, automatically bring them back instead of showing duplicate warning
+        // If the player is away, automatically bring them back and send to end of queue
         if (existingPlayer.isAway) {
-          queue.updatePlayer(existingPlayer.id, { isAway: false });
+          queue.setPlayers((prev) => {
+            const without = prev.filter((p) => p.id !== existingPlayer.id);
+            return [...without, { ...existingPlayer, isAway: false }];
+          });
           showToast("info", "Geri Döndü", {
-            description: `${existingPlayer.kickUsername} tekrar bilgisayar başında.`,
+            description: `${existingPlayer.kickUsername} tekrar bilgisayar başında (sıranın sonuna eklendi).`,
           });
           return;
         }
