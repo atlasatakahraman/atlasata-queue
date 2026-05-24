@@ -3,6 +3,8 @@
 import {
   MODERATION_STORAGE_KEY,
   RESPECT_DEDUCTIONS,
+  getDecayFactor,
+  getEscalationMultiplier,
 } from "@/lib/moderation-constants";
 import type {
   Ban,
@@ -41,7 +43,36 @@ function loadStore(): ModerationStore {
   try {
     const raw = localStorage.getItem(MODERATION_STORAGE_KEY);
     if (raw) {
-      return { ...EMPTY_STORE, ...JSON.parse(raw) };
+      const store: ModerationStore = { ...EMPTY_STORE, ...JSON.parse(raw) };
+
+      // Auto-deactivate expired punishments and bans on load
+      const now = new Date().toISOString();
+      let changed = false;
+
+      store.punishments = store.punishments.map((p) => {
+        if (p.isActive && p.expiresAt && p.expiresAt <= now) {
+          changed = true;
+          return { ...p, isActive: false };
+        }
+        return p;
+      });
+
+      store.bans = store.bans.map((b) => {
+        if (b.isActive && b.expiresAt && b.expiresAt <= now) {
+          changed = true;
+          return { ...b, isActive: false };
+        }
+        return b;
+      });
+
+      // Persist the cleanup immediately
+      if (changed) {
+        try {
+          localStorage.setItem(MODERATION_STORAGE_KEY, JSON.stringify(store));
+        } catch { /* ignore */ }
+      }
+
+      return store;
     }
   } catch {
     /* ignore */
@@ -73,14 +104,23 @@ function computeRespect(
     (b) => b.kickUsername.toLowerCase() === kickUsername.toLowerCase(),
   );
 
-  const deduction =
-    userWarnings.length * RESPECT_DEDUCTIONS.warning +
-    userPunishments.length * RESPECT_DEDUCTIONS.punishment +
-    userBans.length * RESPECT_DEDUCTIONS.ban;
+  // Chronologically sort all offenses to determine proper escalation multipliers
+  const allOffenses = [
+    ...userWarnings.map(w => ({ type: "warning" as const, issuedAt: w.issuedAt, base: RESPECT_DEDUCTIONS.warning })),
+    ...userPunishments.map(p => ({ type: "punishment" as const, issuedAt: p.issuedAt, base: RESPECT_DEDUCTIONS.punishment })),
+    ...userBans.map(b => ({ type: "ban" as const, issuedAt: b.issuedAt, base: RESPECT_DEDUCTIONS.ban }))
+  ].sort((a, b) => new Date(a.issuedAt).getTime() - new Date(b.issuedAt).getTime());
+
+  let deduction = 0;
+  allOffenses.forEach((offense, index) => {
+    const escalationMult = getEscalationMultiplier(index);
+    const decayFactor = getDecayFactor(offense.issuedAt);
+    deduction += offense.base * escalationMult * decayFactor;
+  });
 
   return {
     kickUsername,
-    points: Math.max(0, Math.min(100, 100 - deduction)),
+    points: Math.max(0, Math.min(100, Math.round(100 - deduction))),
     totalWarnings: userWarnings.length,
     totalPunishments: userPunishments.length,
     totalBans: userBans.length,
@@ -117,19 +157,15 @@ function computeBanExpiresAt(duration: BanDuration): string | null {
 }
 
 export function useModeration() {
-  const [store, setStore] = useState<ModerationStore>(EMPTY_STORE);
-  const hasLoadedRef = useRef(false);
+  const [store, setStore] = useState<ModerationStore>(() => loadStore());
+  const isInitialMount = useRef(true);
 
-  // Load from localStorage on mount (permanent, not per-session)
+  // Save to localStorage whenever store changes (skip the initial mount)
   useEffect(() => {
-    const loaded = loadStore();
-    setStore(loaded);
-    hasLoadedRef.current = true;
-  }, []);
-
-  // Save to localStorage whenever store changes (after initial load)
-  useEffect(() => {
-    if (!hasLoadedRef.current) return;
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     saveStore(store);
   }, [store]);
 

@@ -27,6 +27,49 @@ export const RESPECT_DEDUCTIONS = {
   ban: 50,          // -50 per ban
 } as const;
 
+// ─── Respect Tier Labels ──────────────────────────────────────────
+// Tiers are evaluated top-down: the first matching threshold wins.
+export const RESPECT_TIERS = [
+  { min: 90, label: "Mükemmel", color: "text-success", barColor: "bg-success" },
+  { min: 70, label: "İyi", color: "text-success", barColor: "bg-success" },
+  { min: 50, label: "Dikkat", color: "text-cl-warning", barColor: "bg-cl-warning" },
+  { min: 30, label: "Riskli", color: "text-cl-punishment", barColor: "bg-cl-punishment" },
+  { min: 0, label: "Tehlikeli", color: "text-cl-banned", barColor: "bg-cl-banned" },
+] as const;
+
+export function getRespectTier(points: number) {
+  return RESPECT_TIERS.find((t) => points >= t.min) ?? RESPECT_TIERS[RESPECT_TIERS.length - 1];
+}
+
+// ─── Time Decay ───────────────────────────────────────────────────
+// Offenses lose impact over time — incentivizes good behavior.
+// Factor is multiplied against the base deduction.
+export const RESPECT_DECAY_THRESHOLDS = [
+  { daysAgo: 30, factor: 0.25 },  // older than 30 days → 25% impact
+  { daysAgo: 14, factor: 0.5 },   // older than 14 days → 50% impact
+  { daysAgo: 7, factor: 0.75 },   // older than 7 days → 75% impact
+  { daysAgo: 0, factor: 1.0 },    // recent → full impact
+] as const;
+
+export function getDecayFactor(issuedAt: string): number {
+  const daysAgo = (Date.now() - new Date(issuedAt).getTime()) / (1000 * 60 * 60 * 24);
+  for (const threshold of RESPECT_DECAY_THRESHOLDS) {
+    if (daysAgo >= threshold.daysAgo) return threshold.factor;
+  }
+  return 1.0;
+}
+
+// ─── Escalation ───────────────────────────────────────────────────
+// Repeat offenders get hit harder: Nth offense = base × escalation[N-1]
+export const ESCALATION_MULTIPLIERS = [1.0, 1.0, 1.5, 2.0, 2.5] as const;
+
+export function getEscalationMultiplier(offenseIndex: number): number {
+  if (offenseIndex < ESCALATION_MULTIPLIERS.length) {
+    return ESCALATION_MULTIPLIERS[offenseIndex];
+  }
+  return ESCALATION_MULTIPLIERS[ESCALATION_MULTIPLIERS.length - 1];
+}
+
 export const MODERATION_STORAGE_KEY = "atlas-moderation" as const;
 
 // ─── Moderation Tab Items ─────────────────────────────────────────

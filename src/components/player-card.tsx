@@ -27,6 +27,7 @@ import { ContextMenuOpenContext } from "./player-context-menu";
 interface PlayerCardProps {
   player: QueuePlayer;
   children: React.ReactNode;
+  disabled?: boolean;
 }
 
 function getRankColor(tier?: string): string {
@@ -53,12 +54,13 @@ function getRankBadgeVariant(
   return "secondary";
 }
 
-export function PlayerCard({ player, children }: PlayerCardProps) {
-  const winRate = player.winRate ?? 0;
-  const isWinRateGood = winRate >= 50;
+export function PlayerCard({ player, children, disabled = false }: PlayerCardProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const isContextMenuOpen = useContext(ContextMenuOpenContext);
   const [hoverCardOpen, setHoverCardOpen] = useState(false);
+
+  const winRate = player.winRate ?? 0;
+  const isWinRateGood = winRate >= 50;
 
   const copyToClipboard = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
@@ -80,9 +82,13 @@ export function PlayerCard({ player, children }: PlayerCardProps) {
     }
   };
 
+  if (disabled) {
+    return <>{children}</>;
+  }
+
   return (
     <HoverCard
-      openDelay={1500}
+      openDelay={500}
       closeDelay={100}
       open={hoverCardOpen}
       onOpenChange={handleOpenChange}

@@ -90,7 +90,7 @@ export function Header({
           </div>
           <div className="flex items-center gap-2">
             <h1
-              className="font-heading text-base font-semibold tracking-tight sm:text-lg"
+              className="font-heading text-base font-normal tracking-tight sm:text-lg"
               style={{ letterSpacing: "-0.02em" }}
             >
               TheAtlas — Queue
@@ -133,7 +133,7 @@ export function Header({
             </TooltipContent>
           </Tooltip>
 
-          <Separator orientation="vertical" className="h-5" />
+          <Separator orientation="vertical" className="h-5 self-center" />
 
           {/* Live Status */}
           <Tooltip>
@@ -168,7 +168,7 @@ export function Header({
             </TooltipContent>
           </Tooltip>
 
-          <Separator orientation="vertical" className="h-5" />
+          <Separator orientation="vertical" className="h-5 self-center" />
 
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Users className="h-3.5 w-3.5" />
@@ -198,7 +198,7 @@ export function Header({
             </TooltipContent>
           </Tooltip>
 
-          <Separator orientation="vertical" className="mx-1 h-5" />
+          <Separator orientation="vertical" className="mx-1 h-5 self-center" />
 
           {/* User Menu */}
           <DropdownMenu>

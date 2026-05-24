@@ -166,7 +166,7 @@ const SortableTeamPlayer = React.memo(function SortableTeamPlayer({
           {index + 1}
         </span>
         
-        <PlayerCard player={player}>
+        <PlayerCard player={player} disabled={disableRiotApi}>
           <div className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer">
             <Avatar className={`h-8 w-8 ring-1 ${ringColor} shrink-0`}>
               {player.profileIconId ? (
@@ -207,7 +207,7 @@ function TeamDropZone({ id, children }: { id: string; children: React.ReactNode 
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[60px] rounded-lg transition-colors duration-200 ${
+      className={`min-h-[272px] h-full flex flex-col flex-1 rounded-lg transition-colors duration-200 ${
         isOver ? "bg-primary/5 ring-1 ring-primary/20" : ""
       }`}
     >
@@ -345,7 +345,7 @@ export function TeamDisplay({
           onReconnect={onReconnect || (() => {})}
           onManualAddRequest={onManualAddRequest ? () => onManualAddRequest("A") : undefined}
         >
-          <Card className="overflow-hidden border-team-blue/30 bg-team-blue/3 h-full cursor-default">
+          <Card className="overflow-hidden border-team-blue/30 bg-team-blue/3 flex flex-col h-full cursor-default">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -372,7 +372,7 @@ export function TeamDisplay({
               </div>
             </CardHeader>
             <Separator className="bg-team-blue/10" />
-            <CardContent className="pt-3 min-h-[100px]">
+            <CardContent className="pt-3 flex-1 flex flex-col">
                 <TeamDropZone id={CONTAINER_IDS.A}>
                   <SortableContext
                     items={teamAIds}
@@ -430,7 +430,7 @@ export function TeamDisplay({
           onReconnect={onReconnect || (() => {})}
           onManualAddRequest={onManualAddRequest ? () => onManualAddRequest("B") : undefined}
         >
-          <Card className="overflow-hidden border-team-red/30 bg-team-red/3 h-full cursor-default">
+          <Card className="overflow-hidden border-team-red/30 bg-team-red/3 flex flex-col h-full cursor-default">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -457,7 +457,7 @@ export function TeamDisplay({
               </div>
             </CardHeader>
             <Separator className="bg-team-red/10" />
-            <CardContent className="pt-3 min-h-[100px]">
+            <CardContent className="pt-3 flex-1 flex flex-col">
                 <TeamDropZone id={CONTAINER_IDS.B}>
                   <SortableContext
                     items={teamBIds}

@@ -1,30 +1,34 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { AppSettings, RiotRegion } from "@/types";
 import { REGION_TO_ROUTING } from "@/types";
 import { DEFAULT_SETTINGS } from "@/lib/constants";
 
 export function useSettings() {
-  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Load from localStorage on client side mount to avoid hydration mismatch
-  useEffect(() => {
+  const [settings, setSettings] = useState<AppSettings>(() => {
     try {
-      const stored = localStorage.getItem("atlas-settings");
-      if (stored) {
-        setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(stored) });
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem("atlas-settings");
+        if (stored) return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
       }
-    } catch { } finally {
-      setIsLoading(false);
-    }
+    } catch { }
+    return DEFAULT_SETTINGS;
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const isInitialMount = useRef(true);
+
+  // Mark loading complete after first render (client-side hydration)
+  useEffect(() => {
+    setIsLoading(false);
   }, []);
 
-  // Save to localStorage whenever settings change
+  // Save to localStorage whenever settings change (skip initial mount)
   useEffect(() => {
-    // Prevent saving DEFAULT_SETTINGS over actual stored settings during initial mount
-    if (settings === DEFAULT_SETTINGS) return;
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     try {
       localStorage.setItem("atlas-settings", JSON.stringify(settings));
     } catch { }

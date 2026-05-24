@@ -59,7 +59,7 @@ Oyuncular için uyarı, ceza ve ban yönetimi sunar. İki uyarıya ulaşan oyunc
 ### Kurulum
 
 ```bash
-git clone https://github.com/atlasatakahraman/atlasata-queue.git
+git clone https://github.com/atlasatakahraman/TheAtlas-Queue.git
 cd atlasata-queue
 bun install
 ```

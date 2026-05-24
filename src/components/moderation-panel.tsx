@@ -41,7 +41,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { MODERATION_TABS } from "@/lib/moderation-constants";
+import { MODERATION_TABS, getRespectTier } from "@/lib/moderation-constants";
 import type { Ban, Punishment, Warning } from "@/types/moderation";
 import {
   AlertTriangle,
@@ -155,29 +155,78 @@ function getTypeLabel(type: "warning" | "punishment" | "ban") {
 }
 
 function RespectBar({ points }: { points: number }) {
-  const color =
-    points >= 70
-      ? "bg-success"
-      : points >= 40
-        ? "bg-[var(--cl-warning)]"
-        : "bg-[var(--cl-banned)]";
+  const tier = getRespectTier(points);
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div className="flex items-center gap-2 min-w-[100px]">
-          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+        <div className="flex items-center gap-2 min-w-[80px] cursor-pointer hover:opacity-85 transition-opacity">
+          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden shadow-inner">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${color}`}
+              className={`h-full rounded-full transition-all duration-700 ease-out ${tier.barColor}`}
               style={{ width: `${points}%` }}
             />
           </div>
-          <span className="text-xs font-mono text-muted-foreground w-8 text-right">
-            {points}
-          </span>
+          <div className="flex items-center gap-1.5 shrink-0 select-none">
+            <span className="text-xs font-mono font-semibold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-full min-w-[28px] text-center border border-border/20">
+              {points}
+            </span>
+          </div>
         </div>
       </TooltipTrigger>
-      <TooltipContent>
-        <p>Saygı Puanı: {points}/100</p>
+      <TooltipContent className="glass shadow-xl p-2.5 max-w-[240px] text-xs text-foreground">
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between border-b border-border/30 pb-1">
+            <span className="font-semibold">Saygı Seviyesi</span>
+            <span className={`font-bold ${tier.color}`}>{tier.label}</span>
+          </div>
+          <p className="text-muted-foreground leading-relaxed">
+            Oyuncunun kurallara uyum puanı <span className="font-bold font-mono">{points}/100</span>.
+          </p>
+          <div className="text-[10px] bg-muted/40 p-1.5 rounded text-muted-foreground">
+            Zamanla azalan cezalar puanı kademeli olarak geri kazandırır.
+          </div>
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function TruncatedReason({
+  reason,
+  maxWidth = "max-w-[200px]",
+  className = "text-xs text-muted-foreground",
+  charLimit,
+}: {
+  reason: string;
+  maxWidth?: string;
+  className?: string;
+  charLimit?: number;
+}) {
+  if (!reason) return <span className="text-muted-foreground/30">—</span>;
+
+  const limit = charLimit ?? (maxWidth.includes("400") ? 48 : 24);
+  const isLong = reason.length > limit;
+
+  const content = (
+    <div className={`${className} truncate ${maxWidth} ${isLong ? "cursor-default" : ""}`}>
+      {reason}
+    </div>
+  );
+
+  if (!isLong) {
+    return content;
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        {content}
+      </TooltipTrigger>
+      <TooltipContent className="flex flex-col items-start gap-1 text-xs text-foreground bg-[#151412] border border-[#2a2723] rounded-lg p-3 shadow-2xl leading-relaxed max-w-[320px] whitespace-pre-wrap break-words [&>svg]:hidden">
+        <div className="font-semibold text-[var(--cl-warning)] pb-1 border-b border-[#2a2723] w-full text-left">
+          İşlem Gerekçesi
+        </div>
+        <div className="text-foreground/90 font-medium mt-1 w-full text-left">{reason}</div>
       </TooltipContent>
     </Tooltip>
   );
@@ -198,10 +247,26 @@ export function ModerationPanel({
   onIssueWarningDirectly,
 }: ModerationPanelProps) {
   const [activeSubTab, setActiveSubTab] = useState("warnings");
+
+  useEffect(() => {
+    const savedSubTab = localStorage.getItem("theatlas_mod_active_subtab");
+    if (
+      savedSubTab &&
+      ["warnings", "punishments", "bans", "respect", "history"].includes(savedSubTab)
+    ) {
+      setActiveSubTab(savedSubTab);
+    }
+  }, []);
+
+  const handleSubTabChange = (value: string) => {
+    setActiveSubTab(value);
+    localStorage.setItem("theatlas_mod_active_subtab", value);
+  };
+
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmTitle, setConfirmTitle] = useState("");
   const [confirmDescription, setConfirmDescription] = useState("");
-  const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
+  const [confirmAction, setConfirmAction] = useState<() => void>(() => { });
 
   const triggerConfirm = (
     title: string,
@@ -306,7 +371,13 @@ export function ModerationPanel({
           <Button
             size="sm"
             className="gap-2 h-8"
-            onClick={() => onNewAction()}
+            onClick={() => {
+              let defaultAction: "warning" | "punishment" | "ban" | undefined;
+              if (activeSubTab === "warnings") defaultAction = "warning";
+              else if (activeSubTab === "punishments") defaultAction = "punishment";
+              else if (activeSubTab === "bans") defaultAction = "ban";
+              onNewAction(undefined, defaultAction);
+            }}
             id="new-moderation-action"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -315,7 +386,7 @@ export function ModerationPanel({
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
+        <Tabs value={activeSubTab} onValueChange={handleSubTabChange}>
           <TabsList
             ref={setModTabsList}
             className="relative flex w-full bg-muted/50 p-1 sliding-tabs mb-2"
@@ -380,8 +451,8 @@ export function ModerationPanel({
                                   {w.level}. Uyarı
                                 </Badge>
                               </TableCell>
-                              <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
-                                {w.reason}
+                              <TableCell>
+                                <TruncatedReason reason={w.reason} />
                               </TableCell>
                               <TableCell>
                                 <RespectBar
@@ -505,8 +576,8 @@ export function ModerationPanel({
                                     formatDuration(p.duration)}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
-                                {p.reason}
+                              <TableCell>
+                                <TruncatedReason reason={p.reason} />
                               </TableCell>
                               <TableCell>
                                 <RespectBar
@@ -620,8 +691,8 @@ export function ModerationPanel({
                                   {formatDuration(b.duration)}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
-                                {b.reason}
+                              <TableCell>
+                                <TruncatedReason reason={b.reason} />
                               </TableCell>
                               <TableCell>
                                 <RespectBar
@@ -759,9 +830,11 @@ export function ModerationPanel({
                               {item.detail}{" "}
                             </span>
                           </div>
-                          <p className="text-[13px] text-muted-foreground truncate mt-0.5">
-                            {item.reason}
-                          </p>
+                          <TruncatedReason
+                            reason={item.reason}
+                            maxWidth="max-w-[400px]"
+                            className="text-[13px] text-muted-foreground mt-0.5"
+                          />
                         </div>
                         <span className="text-[10px] text-muted-foreground shrink-0">
                           {formatDate(item.issuedAt)}

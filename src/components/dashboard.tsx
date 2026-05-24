@@ -126,12 +126,34 @@ export function Dashboard() {
         setSlideDirection(newIndex > prevIndex ? "right" : "left");
       }
       setActiveTab(value);
+      localStorage.setItem("theatlas_active_tab", value);
     },
     [activeTab],
   );
+
   const [queueFilter, setQueueFilter] = useState<
     "all" | "queue" | "ingame" | "away"
   >("all");
+
+  const handleQueueFilterChange = useCallback((value: string) => {
+    setQueueFilter(value as any);
+    localStorage.setItem("theatlas_queue_filter", value);
+  }, []);
+
+  useEffect(() => {
+    const savedTab = localStorage.getItem("theatlas_active_tab");
+    if (savedTab && ["queue", "teams", "moderation"].includes(savedTab)) {
+      setActiveTab(savedTab);
+    }
+
+    const savedQueueFilter = localStorage.getItem("theatlas_queue_filter");
+    if (
+      savedQueueFilter &&
+      ["all", "queue", "ingame", "away"].includes(savedQueueFilter)
+    ) {
+      setQueueFilter(savedQueueFilter as any);
+    }
+  }, []);
 
   const isQueueIndicatorFirst = useRef(true);
   const [queueTabsList, setQueueTabsList] = useState<HTMLDivElement | null>(
@@ -921,8 +943,8 @@ export function Dashboard() {
       (p) => !p.isAway && p.isInGame,
     ).length;
 
-    if (activeLength === 0) {
-      showToast("error", "Sırada aktif oyuncu bulunmuyor", {});
+    if (activeLength < 2) {
+      showToast("error", "Tek Çekim için en az 2 aktif oyuncu gerekli", {});
       return;
     }
 
@@ -974,7 +996,7 @@ export function Dashboard() {
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between animate-slide-right-fade">
               <div>
                 <h2
-                  className="text-lg font-heading font-semibold tracking-tight"
+                  className="text-lg font-heading font-normal tracking-tight"
                   style={{ letterSpacing: "-0.02em" }}
                 >
                   Şamata Sırası
@@ -1012,7 +1034,7 @@ export function Dashboard() {
                     <TooltipTrigger asChild>
                       <span
                         tabIndex={
-                          queue.players.filter((p) => !p.isAway).length === 0
+                          queue.players.filter((p) => !p.isAway).length < 2
                             ? 0
                             : undefined
                         }
@@ -1023,7 +1045,7 @@ export function Dashboard() {
                           className="gap-2 h-9"
                           onClick={handleSinglePick}
                           disabled={
-                            queue.players.filter((p) => !p.isAway).length === 0
+                            queue.players.filter((p) => !p.isAway).length < 2
                           }
                           id="single-pick-button"
                         >
@@ -1043,7 +1065,7 @@ export function Dashboard() {
                         tabIndex={
                           !(
                             queue.players.filter((p) => !p.isAway).length >=
-                              settings.teamSize * 2 ||
+                            settings.teamSize * 2 ||
                             (!!queue.teamResult &&
                               queue.players.filter(
                                 (p) => !p.isAway && p.isInGame,
@@ -1061,7 +1083,7 @@ export function Dashboard() {
                           disabled={
                             !(
                               queue.players.filter((p) => !p.isAway).length >=
-                                settings.teamSize * 2 ||
+                              settings.teamSize * 2 ||
                               (queue.teamResult &&
                                 queue.players.filter(
                                   (p) => !p.isAway && p.isInGame,
@@ -1078,7 +1100,7 @@ export function Dashboard() {
                     <TooltipContent>
                       {!(
                         queue.players.filter((p) => !p.isAway).length >=
-                          settings.teamSize * 2 ||
+                        settings.teamSize * 2 ||
                         (queue.teamResult &&
                           queue.players.filter((p) => !p.isAway && p.isInGame)
                             .length >= 3)
@@ -1142,7 +1164,7 @@ export function Dashboard() {
                     {queue.players.length > 0 && (
                       <Badge
                         variant="secondary"
-                        className="ml-1 h-5 min-w-5 px-1.5 text-[10px]"
+                        className="ml-1 h-5 min-w-5 rounded-full p-0 flex items-center justify-center text-[10px] leading-none font-semibold"
                       >
                         {queue.players.length}
                       </Badge>
@@ -1191,7 +1213,7 @@ export function Dashboard() {
                       </div>
                       <Tabs
                         value={queueFilter}
-                        onValueChange={(v) => setQueueFilter(v as any)}
+                        onValueChange={handleQueueFilterChange}
                         className="mt-3 w-full"
                       >
                         <TabsList
@@ -1258,6 +1280,7 @@ export function Dashboard() {
                             }
                             onEditPlayer={setEditingPlayer}
                             onModerate={handleModerateRequest}
+                            moderation={moderation}
                           />
                         </div>
                       </GlobalContextMenu>

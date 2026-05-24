@@ -19,6 +19,7 @@ import { Clock, GripVertical, X } from "lucide-react";
 import React from "react";
 import { PlayerCard } from "./player-card";
 import { PlayerContextMenu } from "./player-context-menu";
+import { ModerationPlayerBadge } from "./moderation-player-badge";
 
 function getRankColorClass(tier?: string): string {
   const colors: Record<string, string> = {
@@ -58,6 +59,11 @@ interface SortablePlayerRowProps {
   ) => void;
   isOverlay?: boolean;
   cellWidths?: number[];
+  isWarned?: boolean;
+  isPunished?: boolean;
+  isBanned?: boolean;
+  warningLevel?: number;
+  respectPoints?: number;
 }
 
 function SortablePlayerRowInner({
@@ -77,6 +83,11 @@ function SortablePlayerRowInner({
   onModerate,
   isOverlay = false,
   cellWidths,
+  isWarned,
+  isPunished,
+  isBanned,
+  warningLevel,
+  respectPoints,
 }: SortablePlayerRowProps) {
   const {
     attributes,
@@ -140,7 +151,7 @@ function SortablePlayerRowInner({
 
         {/* Player */}
         <TableCell style={cellWidths ? { width: cellWidths[1] } : undefined}>
-          <PlayerCard player={player}>
+          <PlayerCard player={player} disabled={disableRiotApi}>
             <button className="flex text-left items-center gap-3 w-full min-w-[200px] outline-none group-focus-visible:ring-2 rounded-sm ring-ring">
               <div className="relative">
                 <Avatar className="h-10 w-10 ring-2 ring-border/50 transition-shadow">
@@ -165,6 +176,13 @@ function SortablePlayerRowInner({
                   <p className="text-sm font-semibold tracking-tight truncate max-w-[240px] group-hover:text-primary transition-colors">
                     {player.riotGameName}
                   </p>
+                  <ModerationPlayerBadge
+                    isWarned={!!isWarned}
+                    isPunished={!!isPunished}
+                    isBanned={!!isBanned}
+                    warningLevel={warningLevel ?? 0}
+                    respectPoints={respectPoints ?? 100}
+                  />
                   {player.isAway && (
                     <Badge
                       variant="outline"
@@ -300,6 +318,11 @@ export const SortablePlayerRow = React.memo(
     if (prev.joinTimeFormatted !== next.joinTimeFormatted) return false;
     if (prev.isOverlay !== next.isOverlay) return false;
     if (prev.cellWidths !== next.cellWidths) return false;
+    if (prev.isWarned !== next.isWarned) return false;
+    if (prev.isPunished !== next.isPunished) return false;
+    if (prev.isBanned !== next.isBanned) return false;
+    if (prev.warningLevel !== next.warningLevel) return false;
+    if (prev.respectPoints !== next.respectPoints) return false;
 
     const p = prev.player;
     const n = next.player;

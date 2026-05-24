@@ -242,21 +242,21 @@ export function SinglePickDialog({
     const n = wheelPlayers.length;
     const segAngle = 360 / n;
     const winnerCenterAngle = (winnerIdx + 0.5) * segAngle;
-    const fullSpins = 5 + cryptoRand(3);
+    const fullSpins = 8 + cryptoRand(4);
     const targetRotation =
-      fullSpins * 360 + ((360 - winnerCenterAngle + 270) % 360);
+      fullSpins * 360 + ((360 - winnerCenterAngle) % 360);
 
     targetRotationRef.current = targetRotation;
     setSpinRotation(0);
 
-    const totalDuration = 4000;
+    const totalDuration = 6000;
     const startTime = performance.now();
-    const easeOutQuint = (t: number) => 1 - Math.pow(1 - t, 5);
+    const easeOutExciting = (t: number) => 1 - Math.pow(1 - t, 7);
 
     const step = (now: number) => {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / totalDuration, 1);
-      const rotation = easeOutQuint(progress) * targetRotation;
+      const rotation = easeOutExciting(progress) * targetRotation;
       setSpinRotation(rotation);
 
       if (progress < 1) {
@@ -345,6 +345,19 @@ export function SinglePickDialog({
     setIsAnimating(false);
   }, [isAnimating, animationStyle]);
 
+  // Keyboard shortcut: Space or Enter to skip animation
+  useEffect(() => {
+    if (!open || !isAnimating) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "Space" || e.code === "Enter") {
+        e.preventDefault();
+        skipAnimation();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, isAnimating, skipAnimation]);
+
   useEffect(() => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -395,6 +408,36 @@ export function SinglePickDialog({
     const segAngle = 360 / n;
 
     const segments = spinPlayers.map((player, i) => {
+      // Single player: a 360° arc collapses (start === end point), use a circle instead
+      if (n === 1) {
+        return (
+          <g key={player.id + "-" + i}>
+            <circle
+              cx={cx}
+              cy={cy}
+              r={r}
+              fill={WHEEL_COLORS[0]}
+              stroke="#ccc6bb"
+              strokeWidth="1"
+            />
+            <text
+              x={cx}
+              y={cy}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fill={WHEEL_TEXT_COLORS[0]}
+              fontSize={14}
+              fontWeight="700"
+              style={{ fontFamily: "var(--font-sans)" }}
+            >
+              {player.riotGameName.length > 10
+                ? player.riotGameName.slice(0, 9) + "…"
+                : player.riotGameName}
+            </text>
+          </g>
+        );
+      }
+
       const startAngle = (i * segAngle * Math.PI) / 180;
       const endAngle = ((i + 1) * segAngle * Math.PI) / 180;
       const x1 = cx + r * Math.cos(startAngle);
@@ -439,9 +482,9 @@ export function SinglePickDialog({
 
     return (
       <div className="relative flex items-center justify-center">
-        {/* Pointer at top */}
-        <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-20">
-          <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-t-[18px] border-l-transparent border-r-transparent border-t-foreground drop-shadow-md" />
+        {/* Pointer at right */}
+        <div className="absolute top-1/2 -right-1 -translate-y-1/2 z-20">
+          <div className="w-0 h-0 border-t-[10px] border-b-[10px] border-r-[18px] border-t-transparent border-b-transparent border-r-foreground drop-shadow-md" />
         </div>
 
         <svg
@@ -504,7 +547,7 @@ export function SinglePickDialog({
           </DialogTitle>
           <DialogDescription>
             {isAnimating
-              ? "Çekiliş yapılıyor..."
+              ? "Çekiliş yapılıyor... (Space ile atla)"
               : "Sıradan rastgele bir oyuncu seçildi."}
           </DialogDescription>
         </DialogHeader>

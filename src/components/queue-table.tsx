@@ -44,6 +44,12 @@ interface QueueTableProps {
   onManualAddRequest?: () => void;
   onEditPlayer?: (player: QueuePlayer) => void;
   onModerate?: (kickUsername: string, actionType: "warning" | "punishment" | "ban") => void;
+  moderation?: {
+    isPlayerBanned: (username: string) => boolean;
+    isPlayerPunished: (username: string) => boolean;
+    getRespectScore: (username: string) => number;
+    getPlayerRecord: (username: string) => any;
+  };
 }
 
 export function QueueTable({
@@ -59,6 +65,7 @@ export function QueueTable({
   onCreateTeamsRequest,
   onEditPlayer,
   onModerate,
+  moderation,
 }: QueueTableProps) {
   // Track "seen" IDs so mount animation only fires once
   const seenIdsRef = useRef<Set<string>>(new Set());
@@ -179,6 +186,13 @@ export function QueueTable({
                 const isNew = !seenIdsRef.current.has(player.id);
                 if (isNew) seenIdsRef.current.add(player.id);
 
+                const record = moderation?.getPlayerRecord(player.kickUsername);
+                const isWarned = record ? (record.currentWarningLevel ?? 0) > 0 : false;
+                const isPunished = moderation?.isPlayerPunished(player.kickUsername) ?? false;
+                const isBanned = moderation?.isPlayerBanned(player.kickUsername) ?? false;
+                const warningLevel = record?.currentWarningLevel ?? 0;
+                const respectPoints = moderation?.getRespectScore(player.kickUsername) ?? 100;
+
                 return (
                   <SortablePlayerRow
                     key={player.id}
@@ -196,6 +210,11 @@ export function QueueTable({
                     joinTimeFormatted={timeData[index].formatted}
                     joinTimeFull={timeData[index].full}
                     onModerate={onModerate}
+                    isWarned={isWarned}
+                    isPunished={isPunished}
+                    isBanned={isBanned}
+                    warningLevel={warningLevel}
+                    respectPoints={respectPoints}
                   />
                 );
               })}
@@ -213,23 +232,38 @@ export function QueueTable({
               >
                 <Table className="w-full" style={{ tableLayout: "fixed" }}>
                   <TableBody>
-                    <SortablePlayerRow
-                      player={activePlayer}
-                      index={activeIndex}
-                      isNew={false}
-                      disableRiotApi={disableRiotApi}
-                      onRemovePlayer={onRemovePlayer}
-                      onUpdatePlayer={onUpdatePlayer}
-                      onAddToTeam={onAddToTeam}
-                      onRemoveFromTeam={onRemoveFromTeam}
-                      isTeamsCreated={isTeamsCreated}
-                      onCreateTeamsRequest={onCreateTeamsRequest}
-                      joinTimeFormatted={timeData[activeIndex].formatted}
-                      joinTimeFull={timeData[activeIndex].full}
-                      onModerate={onModerate}
-                      isOverlay={true}
-                      cellWidths={draggedCellWidths}
-                    />
+                    {(() => {
+                      const record = moderation?.getPlayerRecord(activePlayer.kickUsername);
+                      const isWarned = record ? (record.currentWarningLevel ?? 0) > 0 : false;
+                      const isPunished = moderation?.isPlayerPunished(activePlayer.kickUsername) ?? false;
+                      const isBanned = moderation?.isPlayerBanned(activePlayer.kickUsername) ?? false;
+                      const warningLevel = record?.currentWarningLevel ?? 0;
+                      const respectPoints = moderation?.getRespectScore(activePlayer.kickUsername) ?? 100;
+                      return (
+                        <SortablePlayerRow
+                          player={activePlayer}
+                          index={activeIndex}
+                          isNew={false}
+                          disableRiotApi={disableRiotApi}
+                          onRemovePlayer={onRemovePlayer}
+                          onUpdatePlayer={onUpdatePlayer}
+                          onAddToTeam={onAddToTeam}
+                          onRemoveFromTeam={onRemoveFromTeam}
+                          isTeamsCreated={isTeamsCreated}
+                          onCreateTeamsRequest={onCreateTeamsRequest}
+                          joinTimeFormatted={timeData[activeIndex].formatted}
+                          joinTimeFull={timeData[activeIndex].full}
+                          onModerate={onModerate}
+                          isOverlay={true}
+                          cellWidths={draggedCellWidths}
+                          isWarned={isWarned}
+                          isPunished={isPunished}
+                          isBanned={isBanned}
+                          warningLevel={warningLevel}
+                          respectPoints={respectPoints}
+                        />
+                      );
+                    })()}
                   </TableBody>
                 </Table>
               </div>
