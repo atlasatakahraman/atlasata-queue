@@ -387,11 +387,19 @@ export function Dashboard() {
       );
 
       if (existingPlayer) {
-        handleDuplicateAttempt(
-          kickUsername,
-          `${existingPlayer.riotGameName}#${existingPlayer.riotTagLine}`,
-        );
-        return;
+        if (existingPlayer.isAway) {
+          queue.updatePlayer(existingPlayer.id, { isAway: false });
+          showToast("info", "Geri Döndü", {
+            description: `${existingPlayer.kickUsername} tekrar bilgisayar başında.`,
+          });
+          return;
+        } else {
+          handleDuplicateAttempt(
+            kickUsername,
+            `${existingPlayer.riotGameName}#${existingPlayer.riotTagLine}`,
+          );
+          return;
+        }
       }
 
       const newPlayer: QueuePlayer = {
@@ -1283,18 +1291,29 @@ export function Dashboard() {
                       setModerationDialogOpen(true);
                     }}
                     onIssueWarningDirectly={(kickUsername) => {
-                      const result = moderation.issueWarning(kickUsername, "Yönetici Tarafından Doğrudan Uyarı");
+                      const result = moderation.issueWarning(
+                        kickUsername,
+                        "Yönetici Tarafından Doğrudan Uyarı",
+                      );
                       if (result.automaticallyPunished) {
                         pruneModeratedPlayer(kickUsername);
-                        showToast("error", "Uyarı Sınırı Aşıldı - Ceza Verildi", {
-                          description: `${kickUsername} uyarı limiti aşıldığı için tüm uyarıları silindi ve 1 maçlık ceza uygulandı.`,
-                        });
+                        showToast(
+                          "error",
+                          "Uyarı Sınırı Aşıldı - Ceza Verildi",
+                          {
+                            description: `${kickUsername} uyarı limiti aşıldığı için tüm uyarıları silindi ve 1 maçlık ceza uygulandı.`,
+                          },
+                        );
                         return;
                       }
                       if (result.warning) {
-                        showToast("warning", `${result.warning.level}. Uyarı Verildi`, {
-                          description: `${kickUsername}: Yönetici Tarafından Doğrudan Uyarı`,
-                        });
+                        showToast(
+                          "warning",
+                          `${result.warning.level}. Uyarı Verildi`,
+                          {
+                            description: `${kickUsername}: Yönetici Tarafından Doğrudan Uyarı`,
+                          },
+                        );
 
                         if (result.shouldEscalate) {
                           moderation.issuePunishment(
