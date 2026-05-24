@@ -387,6 +387,7 @@ export function Dashboard() {
       );
 
       if (existingPlayer) {
+        // If the player is away, automatically bring them back instead of showing duplicate warning
         if (existingPlayer.isAway) {
           queue.updatePlayer(existingPlayer.id, { isAway: false });
           showToast("info", "Geri Döndü", {
