@@ -8,7 +8,7 @@
 [![React](https://img.shields.io/badge/React-19-blue?style=for-the-badge&logo=react)](https://react.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Riot Games API](https://img.shields.io/badge/Riot_Games-API-eb0029?style=for-the-badge&logo=riotgames&logoColor=white)](https://developer.riotgames.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-success?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![License: AAKNCL-1.0](https://img.shields.io/badge/License-AAKNCL--1.0-success?style=for-the-badge)](LICENSE)
 
 _Özel "Şamata" oyunları için tasarlanmış sade ve odaklı bir dashboard — chat'teki ilk `!sıra` komutundan takımların oluşturulmasına kadar lobi yönetimini tamamen üstlenir._
 
@@ -43,8 +43,8 @@ Butonlar lobi durumuna göre uyum sağlar. Henüz geçerli olmayan eylemler (ör
 **Sağ Tık Oyuncu Menüsü**
 Dashboard genelinde birleşik bağlam menüleri: Kick veya Riot ID'sini kopyala, oyuncuyu Uzakta (AFK) olarak işaretle, sıra durumları arasında taşı ya da tamamen kaldır.
 
-**Oturum Kalıcılığı**
-Dashboard durumu `localStorage`'a kaydedilir; yayın ortasında bir tarayıcı yenilemesi sırayı sıfırlamaz. Sıra ve aktif takımlar her zaman senkronize kalır.
+**Moderasyon Sistemi**
+Oyuncular için uyarı, ceza ve ban yönetimi sunar. İki uyarıya ulaşan oyunculara otomatik olarak 1 maçlık ceza uygulanır ve sıradan çıkarılır. Yönetici, sağ tık menüsünden doğrudan uyarı verebilir ya da detaylı moderasyon diyaloğu üzerinden özel ceza/ban süresi tanımlayabilir.
 
 ---
 
