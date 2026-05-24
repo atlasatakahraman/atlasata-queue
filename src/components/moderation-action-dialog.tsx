@@ -1,20 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import type { PunishmentDuration, BanDuration, ModerationActionType } from "@/types/moderation";
-import { PUNISHMENT_DURATIONS, BAN_DURATIONS } from "@/lib/moderation-constants";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Command,
   CommandEmpty,
@@ -23,6 +9,16 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
@@ -37,12 +33,21 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  BAN_DURATIONS,
+  PUNISHMENT_DURATIONS,
+} from "@/lib/moderation-constants";
+import type {
+  BanDuration,
+  ModerationActionType,
+  PunishmentDuration,
+} from "@/types/moderation";
+import {
   AlertTriangle,
-  Clock,
   Ban,
-  ChevronDown,
   ChevronsUpDown,
+  Clock
 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface ModerationActionDialogProps {
   open: boolean;
@@ -57,7 +62,11 @@ interface ModerationActionDialogProps {
     customDurationMs?: number,
     customDurationLabel?: string,
   ) => void;
-  onIssueBan: (kickUsername: string, duration: BanDuration, reason: string) => void;
+  onIssueBan: (
+    kickUsername: string,
+    duration: BanDuration,
+    reason: string,
+  ) => void;
   initialKickUsername?: string;
   initialActionType?: ModerationActionType;
 }
@@ -68,9 +77,27 @@ const ACTION_TYPES: Array<{
   icon: typeof AlertTriangle;
   colorClass: string;
 }> = [
-  { value: "warning", label: "Uyarı", icon: AlertTriangle, colorClass: "border-[var(--cl-warning)] text-[var(--cl-warning)] bg-[var(--cl-warning)]/10" },
-  { value: "punishment", label: "Ceza", icon: Clock, colorClass: "border-[var(--cl-punishment)] text-[var(--cl-punishment)] bg-[var(--cl-punishment)]/10" },
-  { value: "ban", label: "Yasak", icon: Ban, colorClass: "border-[var(--cl-banned)] text-[var(--cl-banned)] bg-[var(--cl-banned)]/10" },
+  {
+    value: "warning",
+    label: "Uyarı",
+    icon: AlertTriangle,
+    colorClass:
+      "border-[var(--cl-warning)] text-[var(--cl-warning)] bg-[var(--cl-warning)]/10",
+  },
+  {
+    value: "punishment",
+    label: "Ceza",
+    icon: Clock,
+    colorClass:
+      "border-[var(--cl-punishment)] text-[var(--cl-punishment)] bg-[var(--cl-punishment)]/10",
+  },
+  {
+    value: "ban",
+    label: "Yasak",
+    icon: Ban,
+    colorClass:
+      "border-[var(--cl-banned)] text-[var(--cl-banned)] bg-[var(--cl-banned)]/10",
+  },
 ];
 
 export function ModerationActionDialog({
@@ -84,13 +111,18 @@ export function ModerationActionDialog({
   initialKickUsername = "",
   initialActionType = "warning",
 }: ModerationActionDialogProps) {
-  const [actionType, setActionType] = useState<ModerationActionType>(initialActionType);
+  const [actionType, setActionType] =
+    useState<ModerationActionType>(initialActionType);
   const [kickUsername, setKickUsername] = useState(initialKickUsername);
   const [reason, setReason] = useState("Silivri..");
-  const [punishmentDuration, setPunishmentDuration] = useState<PunishmentDuration>("1_game");
+  const [punishmentDuration, setPunishmentDuration] =
+    useState<PunishmentDuration>("1_game");
   const [banDuration, setBanDuration] = useState<BanDuration>("permanent");
   const [customHours, setCustomHours] = useState("");
   const [playerPopoverOpen, setPlayerPopoverOpen] = useState(false);
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Synchronize state when the dialog is opened or initial values change
   useEffect(() => {
@@ -98,16 +130,25 @@ export function ModerationActionDialog({
       setActionType(initialActionType);
       setKickUsername(initialKickUsername);
       setReason("Silivri.."); // Reset reason on open
+
+      const timer = setTimeout(() => {
+        if (initialKickUsername) {
+          textareaRef.current?.focus();
+        } else {
+          inputRef.current?.focus();
+        }
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [open, initialKickUsername, initialActionType]);
 
   const warningLevel = kickUsername ? currentWarningLevel(kickUsername) : 0;
-  const shouldEscalate = warningLevel >= 2;
+  const shouldEscalate = warningLevel >= 1;
 
   const filteredPlayers = useMemo(() => {
     if (!kickUsername) return playerNames;
-    return playerNames.filter(name =>
-      name.toLowerCase().includes(kickUsername.toLowerCase())
+    return playerNames.filter((name) =>
+      name.toLowerCase().includes(kickUsername.toLowerCase()),
     );
   }, [playerNames, kickUsername]);
 
@@ -125,7 +166,13 @@ export function ModerationActionDialog({
           customMs = parseFloat(customHours) * 60 * 60 * 1000;
           customLabel = `${customHours} Saat`;
         }
-        onIssuePunishment(kickUsername.trim(), punishmentDuration, reason.trim(), customMs, customLabel);
+        onIssuePunishment(
+          kickUsername.trim(),
+          punishmentDuration,
+          reason.trim(),
+          customMs,
+          customLabel,
+        );
         break;
       }
       case "ban":
@@ -142,17 +189,20 @@ export function ModerationActionDialog({
     onOpenChange(false);
   }
 
-  const confirmColor = actionType === "warning"
-    ? "bg-[var(--cl-warning)] hover:bg-[var(--cl-warning)]/90 text-white"
-    : actionType === "punishment"
-    ? "bg-[var(--cl-punishment)] hover:bg-[var(--cl-punishment)]/90 text-white"
-    : "bg-[var(--cl-banned)] hover:bg-[var(--cl-banned)]/90 text-white";
+  const confirmColor =
+    actionType === "warning"
+      ? "bg-[var(--cl-warning)] hover:bg-[var(--cl-warning)]/90 text-white"
+      : actionType === "punishment"
+        ? "bg-[var(--cl-punishment)] hover:bg-[var(--cl-punishment)]/90 text-white"
+        : "bg-[var(--cl-banned)] hover:bg-[var(--cl-banned)]/90 text-white";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]" id="moderation-action-dialog">
         <DialogHeader>
-          <DialogTitle className="font-heading text-lg">Yeni Moderasyon İşlemi</DialogTitle>
+          <DialogTitle className="font-heading text-lg">
+            Yeni Moderasyon İşlemi
+          </DialogTitle>
           <DialogDescription>
             Oyuncuya uyarı, ceza veya yasak verin.
           </DialogDescription>
@@ -163,7 +213,7 @@ export function ModerationActionDialog({
           <div className="space-y-2">
             <Label className="text-xs font-medium">İşlem Türü</Label>
             <div className="grid grid-cols-3 gap-2">
-              {ACTION_TYPES.map(at => {
+              {ACTION_TYPES.map((at) => {
                 const Icon = at.icon;
                 const isActive = actionType === at.value;
                 return (
@@ -188,7 +238,10 @@ export function ModerationActionDialog({
           {/* Player Name with Autocomplete */}
           <div className="space-y-2">
             <Label className="text-xs font-medium">Oyuncu</Label>
-            <Popover open={playerPopoverOpen} onOpenChange={setPlayerPopoverOpen}>
+            <Popover
+              open={playerPopoverOpen}
+              onOpenChange={setPlayerPopoverOpen}
+            >
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -209,7 +262,7 @@ export function ModerationActionDialog({
                   <CommandList>
                     <CommandEmpty>Sonuç bulunamadı. Manuel girin.</CommandEmpty>
                     <CommandGroup>
-                      {filteredPlayers.slice(0, 10).map(name => (
+                      {filteredPlayers.slice(0, 10).map((name) => (
                         <CommandItem
                           key={name}
                           value={name}
@@ -228,6 +281,7 @@ export function ModerationActionDialog({
             </Popover>
             {/* Manual input fallback */}
             <Input
+              ref={inputRef}
               placeholder="veya manuel kullanıcı adı girin"
               value={kickUsername}
               onChange={(e) => setKickUsername(e.target.value)}
@@ -240,7 +294,8 @@ export function ModerationActionDialog({
             <div className="flex items-center gap-2 p-3 rounded-lg bg-[var(--cl-warning)]/10 border border-[var(--cl-warning)]/30">
               <AlertTriangle className="h-4 w-4 text-[var(--cl-warning)] shrink-0" />
               <p className="text-xs text-[var(--cl-warning)]">
-                Bu oyuncu zaten {warningLevel} uyarı almış. Ceza uygulamayı düşünebilirsiniz.
+                Bu oyuncu zaten {warningLevel} uyarı almış. Bir sonraki uyarı
+                doğrudan 1 maçlık ceza uygulayacaktır.
               </p>
             </div>
           )}
@@ -251,17 +306,21 @@ export function ModerationActionDialog({
               <Label className="text-xs font-medium">Ceza Süresi</Label>
               <Select
                 value={punishmentDuration}
-                onValueChange={(v) => setPunishmentDuration(v as PunishmentDuration)}
+                onValueChange={(v) =>
+                  setPunishmentDuration(v as PunishmentDuration)
+                }
               >
                 <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {PUNISHMENT_DURATIONS.map(d => (
+                  {PUNISHMENT_DURATIONS.map((d) => (
                     <SelectItem key={d.value} value={d.value}>
                       <span className="flex items-center gap-2">
                         {d.label}
-                        <span className="text-muted-foreground text-[10px]">— {d.description}</span>
+                        <span className="text-muted-foreground text-[10px]">
+                          — {d.description}
+                        </span>
                       </span>
                     </SelectItem>
                   ))}
@@ -269,7 +328,9 @@ export function ModerationActionDialog({
               </Select>
               {punishmentDuration === "custom" && (
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Özel Süre (Saat)</Label>
+                  <Label className="text-xs text-muted-foreground">
+                    Özel Süre (Saat)
+                  </Label>
                   <Input
                     type="number"
                     min="1"
@@ -295,11 +356,13 @@ export function ModerationActionDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {BAN_DURATIONS.map(d => (
+                  {BAN_DURATIONS.map((d) => (
                     <SelectItem key={d.value} value={d.value}>
                       <span className="flex items-center gap-2">
                         {d.label}
-                        <span className="text-muted-foreground text-[10px]">— {d.description}</span>
+                        <span className="text-muted-foreground text-[10px]">
+                          — {d.description}
+                        </span>
                       </span>
                     </SelectItem>
                   ))}
@@ -312,6 +375,7 @@ export function ModerationActionDialog({
           <div className="space-y-2">
             <Label className="text-xs font-medium">Sebep</Label>
             <Textarea
+              ref={textareaRef}
               placeholder="İşlem sebebini yazın..."
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -329,7 +393,11 @@ export function ModerationActionDialog({
             onClick={handleSubmit}
             disabled={!kickUsername.trim() || !reason.trim()}
           >
-            {actionType === "warning" ? "Uyarı Ver" : actionType === "punishment" ? "Ceza Ver" : "Yasakla"}
+            {actionType === "warning"
+              ? "Uyarı Ver"
+              : actionType === "punishment"
+                ? "Ceza Ver"
+                : "Yasakla"}
           </Button>
         </DialogFooter>
       </DialogContent>

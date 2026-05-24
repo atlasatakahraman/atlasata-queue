@@ -95,12 +95,13 @@ interface ModerationPanelProps {
     kickUsername?: string,
     actionType?: "warning" | "punishment" | "ban",
   ) => void;
+  onIssueWarningDirectly?: (kickUsername: string) => void;
 }
 
 function formatDuration(duration: string): string {
   const mapping: Record<string, string> = {
-    "1_game": "1 Maç",
-    "2_game": "2 Maç",
+    "1_game": "1 Oyun",
+    "2_game": "2 Oyun",
     "1_day": "1 Gün",
     "1_week": "1 Hafta",
     "1_month": "1 Ay",
@@ -194,6 +195,7 @@ export function ModerationPanel({
   onDeleteHistoryItem,
   onClearAllHistory,
   onNewAction,
+  onIssueWarningDirectly,
 }: ModerationPanelProps) {
   const [activeSubTab, setActiveSubTab] = useState("warnings");
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -417,6 +419,17 @@ export function ModerationPanel({
                               <Trash2 className="h-3.5 w-3.5" />
                               Uyarıyı Kaldır
                             </ContextMenuItem>
+                            {onIssueWarningDirectly && (
+                              <ContextMenuItem
+                                className="gap-2 cursor-pointer"
+                                onClick={() =>
+                                  onIssueWarningDirectly(w.kickUsername)
+                                }
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                                Uyarı Ekle
+                              </ContextMenuItem>
+                            )}
                             <ContextMenuItem
                               className="gap-2 cursor-pointer"
                               onClick={() =>

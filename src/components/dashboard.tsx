@@ -1282,6 +1282,34 @@ export function Dashboard() {
                       setInitialModerateAction(actionType);
                       setModerationDialogOpen(true);
                     }}
+                    onIssueWarningDirectly={(kickUsername) => {
+                      const result = moderation.issueWarning(kickUsername, "Yönetici Tarafından Doğrudan Uyarı");
+                      if (result.automaticallyPunished) {
+                        pruneModeratedPlayer(kickUsername);
+                        showToast("error", "Uyarı Sınırı Aşıldı - Ceza Verildi", {
+                          description: `${kickUsername} uyarı limiti aşıldığı için tüm uyarıları silindi ve 1 maçlık ceza uygulandı.`,
+                        });
+                        return;
+                      }
+                      if (result.warning) {
+                        showToast("warning", `${result.warning.level}. Uyarı Verildi`, {
+                          description: `${kickUsername}: Yönetici Tarafından Doğrudan Uyarı`,
+                        });
+
+                        if (result.shouldEscalate) {
+                          moderation.issuePunishment(
+                            kickUsername,
+                            "1_game",
+                            "2. Uyarı Sınırı Aşıldı (Sistem Tarafından Uygulandı)",
+                            "Sistem",
+                          );
+                          pruneModeratedPlayer(kickUsername);
+                          showToast("warning", "Otomatik Ceza Verildi", {
+                            description: `${kickUsername} 2. uyarıya ulaştığı için 1 maçlık ceza uygulandı ve sıradan çıkarıldı.`,
+                          });
+                        }
+                      }
+                    }}
                   />
                 </TabsContent>
               </Tabs>
@@ -1340,22 +1368,33 @@ export function Dashboard() {
             }
             onIssueWarning={(username, reason) => {
               const result = moderation.issueWarning(username, reason);
-              showToast("warning", `${result.warning.level}. Uyarı Verildi`, {
-                description: `${username}: ${reason}`,
-              });
 
-              // Check if warning escalated to level 2, which triggers a 1 game punishment automatically
-              if (result.shouldEscalate) {
-                moderation.issuePunishment(
-                  username,
-                  "1_game",
-                  "2. Uyarı Sınırı Aşıldı (Sistem Tarafından Uygulandı)",
-                  "Sistem",
-                );
+              if (result.automaticallyPunished) {
                 pruneModeratedPlayer(username);
-                showToast("warning", "Otomatik Ceza Verildi", {
-                  description: `${username} 2. uyarıya ulaştığı için 1 maçlık ceza uygulandı ve sıradan çıkarıldı.`,
+                showToast("error", "Uyarı Sınırı Aşıldı - Ceza Verildi", {
+                  description: `${username} uyarı limiti aşıldığı için tüm uyarıları silindi ve 1 maçlık ceza uygulandı.`,
                 });
+                return;
+              }
+
+              if (result.warning) {
+                showToast("warning", `${result.warning.level}. Uyarı Verildi`, {
+                  description: `${username}: ${reason}`,
+                });
+
+                // Check if warning escalated to level 2, which triggers a 1 game punishment automatically
+                if (result.shouldEscalate) {
+                  moderation.issuePunishment(
+                    username,
+                    "1_game",
+                    "2. Uyarı Sınırı Aşıldı (Sistem Tarafından Uygulandı)",
+                    "Sistem",
+                  );
+                  pruneModeratedPlayer(username);
+                  showToast("warning", "Otomatik Ceza Verildi", {
+                    description: `${username} 2. uyarıya ulaştığı için 1 maçlık ceza uygulandı ve sıradan çıkarıldı.`,
+                  });
+                }
               }
             }}
             onIssuePunishment={(

@@ -139,10 +139,59 @@ export function useModeration() {
       kickUsername: string,
       reason: string,
       issuedBy: string = "Admin",
-    ): { warning: Warning; shouldEscalate: boolean } => {
+    ): {
+      warning: Warning | null;
+      shouldEscalate: boolean;
+      automaticallyPunished?: boolean;
+    } => {
       const existing = store.warnings.filter(
         (w) => w.kickUsername.toLowerCase() === kickUsername.toLowerCase(),
       );
+
+      if (existing.length >= 1) {
+        // Reached warning level 2. Remove remaining warnings and issue a 1_game punishment.
+        const punishment: Punishment = {
+          id: crypto.randomUUID(),
+          playerId: kickUsername,
+          kickUsername,
+          duration: "1_game",
+          reason: `2. Uyarı Sınırı Aşıldı (${reason})`,
+          issuedAt: new Date().toISOString(),
+          expiresAt: null,
+          issuedBy: "Sistem",
+          isActive: true,
+          gamesServed: 0,
+        };
+
+        setStore((prev) => {
+          const next = {
+            ...prev,
+            warnings: prev.warnings.filter(
+              (w) =>
+                w.kickUsername.toLowerCase() !== kickUsername.toLowerCase(),
+            ),
+            punishments: [...prev.punishments, punishment],
+          };
+          const respect = computeRespect(
+            kickUsername,
+            next.warnings,
+            next.punishments,
+            next.bans,
+          );
+          next.respectScores = {
+            ...prev.respectScores,
+            [kickUsername.toLowerCase()]: respect,
+          };
+          return next;
+        });
+
+        return {
+          warning: null,
+          shouldEscalate: false,
+          automaticallyPunished: true,
+        };
+      }
+
       const level: WarningLevel = existing.length >= 1 ? 2 : 1;
 
       const warning: Warning = {
@@ -174,7 +223,11 @@ export function useModeration() {
         return next;
       });
 
-      return { warning, shouldEscalate: level >= 2 };
+      return {
+        warning,
+        shouldEscalate: level >= 2,
+        automaticallyPunished: false,
+      };
     },
     [store.warnings],
   );
