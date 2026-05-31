@@ -3,6 +3,13 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableCell, TableRow } from "@/components/ui/table";
 import {
@@ -15,7 +22,18 @@ import type { QueuePlayer } from "@/types";
 import { TIER_LABELS } from "@/types";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Clock, GripVertical, X } from "lucide-react";
+import {
+  AlertTriangle,
+  Clock,
+  Coffee,
+  GripVertical,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  UserCheck,
+  UserMinus,
+  UserPlus,
+} from "lucide-react";
 import React from "react";
 import { PlayerCard } from "./player-card";
 import { PlayerContextMenu } from "./player-context-menu";
@@ -162,7 +180,7 @@ function SortablePlayerRowInner({
                     />
                   ) : null}
                   <AvatarFallback className="text-xs font-semibold">
-                    {player.riotGameName.charAt(0).toUpperCase()}
+                    {(player.riotGameName || player.kickUsername || "?").charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 {player.summonerLevel && (
@@ -291,17 +309,146 @@ function SortablePlayerRowInner({
           </Tooltip>
         </TableCell>
 
-        {/* Remove */}
+        {/* Actions */}
         <TableCell style={cellWidths ? { width: cellWidths[6] } : undefined}>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-muted-foreground hover:text-destructive"
-            onClick={() => onRemovePlayer(player.id)}
-            aria-label={`${player.riotGameName} oyuncusunu kaldır`}
-          >
-            <X className="h-3.5 w-3.5" />
-          </Button>
+          <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+            {/* Add to team buttons — only when player is NOT already in a team */}
+            {!player.isInGame && !player.isAway && !isBanned && !isPunished && (
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-team-blue hover:text-team-blue hover:bg-team-blue/10"
+                      onClick={() => {
+                        if (!isTeamsCreated) {
+                          onCreateTeamsRequest?.(player.id, "A");
+                          return;
+                        }
+                        onAddToTeam?.(player.id, "A");
+                      }}
+                      aria-label="Mavi Takıma Ekle"
+                    >
+                      <UserPlus className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">
+                    Mavi Takıma Ekle
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-team-red hover:text-team-red hover:bg-team-red/10"
+                      onClick={() => {
+                        if (!isTeamsCreated) {
+                          onCreateTeamsRequest?.(player.id, "B");
+                          return;
+                        }
+                        onAddToTeam?.(player.id, "B");
+                      }}
+                      aria-label="Kırmızı Takıma Ekle"
+                    >
+                      <UserPlus className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">
+                    Kırmızı Takıma Ekle
+                  </TooltipContent>
+                </Tooltip>
+              </>
+            )}
+
+            {/* In-game: show remove from team */}
+            {player.isInGame && onRemoveFromTeam && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-amber-500 hover:text-amber-500 hover:bg-amber-500/10"
+                    onClick={() => onRemoveFromTeam(player.id)}
+                    aria-label="Takımdan Çıkar"
+                  >
+                    <UserMinus className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  Takımdan Çıkar
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* More actions dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                  aria-label="Diğer işlemler"
+                >
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {onEditPlayer && (
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={() => onEditPlayer(player)}
+                  >
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Düzenle
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onClick={() =>
+                    onUpdatePlayer(player.id, { isAway: !player.isAway })
+                  }
+                >
+                  {player.isAway ? (
+                    <>
+                      <UserCheck className="mr-2 h-4 w-4" />
+                      Geri Döndü
+                    </>
+                  ) : (
+                    <>
+                      <Coffee className="mr-2 h-4 w-4" />
+                      Uzakta İşaretle
+                    </>
+                  )}
+                </DropdownMenuItem>
+
+                {onModerate && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="cursor-pointer text-amber-600 focus:text-amber-600 focus:bg-amber-500/10"
+                      onClick={() =>
+                        onModerate(player.kickUsername, "warning")
+                      }
+                    >
+                      <AlertTriangle className="mr-2 h-4 w-4" />
+                      İşlem Uygula
+                    </DropdownMenuItem>
+                  </>
+                )}
+
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+                  onClick={() => onRemovePlayer(player.id)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Sıradan Kaldır
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </TableCell>
       </TableRow>
     </PlayerContextMenu>

@@ -99,6 +99,12 @@ export interface AppSettings {
   manualChatroomId?: string;
   enableToasts?: boolean;
   pickAnimationStyle?: "classic" | "list" | "spin" | "none";
+  pageTitle?: string;
+  pageSubtitle?: string;
+  emptyQueueTitle?: string;
+  emptyQueueDescription?: string;
+  queueCardTitle?: string;
+  queueCardDescription?: string;
 }
 
 export interface KickChatMessage {

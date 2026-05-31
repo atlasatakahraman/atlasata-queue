@@ -62,8 +62,12 @@ export function Header({
   }, []);
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/50 glass-warm animate-slide-down-fade">
-      <div className="mx-auto flex h-14 max-w-screen-2xl items-center justify-between gap-4 px-4 sm:px-6">
+    <header
+      className="sticky top-0 z-40 w-full border-b border-border/50 glass-warm animate-slide-down-fade"
+    >
+      <div
+        className="mx-auto flex h-14 max-w-screen-2xl items-center justify-between gap-4 px-4 sm:px-6"
+      >
         {/* Left — Brand */}
         <div className="flex items-center gap-3">
           {/* Theme-aware logo: light mode = black logo, dark mode = white logo */}
@@ -90,8 +94,7 @@ export function Header({
           </div>
           <div className="flex items-center gap-2">
             <h1
-              className="font-heading text-base font-normal tracking-tight sm:text-lg"
-              style={{ letterSpacing: "-0.02em" }}
+              className="font-serif text-base font-normal tracking-tight sm:text-xl flex items-center gap-2"
             >
               TheAtlas — Queue
             </h1>

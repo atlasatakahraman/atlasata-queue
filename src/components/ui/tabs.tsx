@@ -65,7 +65,7 @@ function TabsTrigger({
       data-slot="tabs-trigger"
       className={cn(
         /* ─── Shared base ─────────────────────────────────────── */
-        "relative inline-flex flex-1 items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-all cursor-pointer",
+        "relative inline-flex flex-1 items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-all duration-300",
         "group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start",
         "focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring",
         "disabled:pointer-events-none disabled:opacity-50",

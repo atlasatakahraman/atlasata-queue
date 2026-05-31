@@ -124,7 +124,7 @@ export function PlayerCard({ player, children, disabled = false }: PlayerCardPro
                     />
                   ) : null}
                   <AvatarFallback className="text-xs font-medium">
-                    {player.riotGameName.charAt(0).toUpperCase()}
+                    {(player.riotGameName || player.kickUsername || "?").charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">

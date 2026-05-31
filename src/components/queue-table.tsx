@@ -50,6 +50,8 @@ interface QueueTableProps {
     getRespectScore: (username: string) => number;
     getPlayerRecord: (username: string) => any;
   };
+  emptyQueueTitle?: string;
+  emptyQueueDescription?: string;
 }
 
 export function QueueTable({
@@ -66,6 +68,8 @@ export function QueueTable({
   onEditPlayer,
   onModerate,
   moderation,
+  emptyQueueTitle,
+  emptyQueueDescription,
 }: QueueTableProps) {
   // Track "seen" IDs so mount animation only fires once
   const seenIdsRef = useRef<Set<string>>(new Set());
@@ -136,21 +140,29 @@ export function QueueTable({
     : -1;
 
   if (players.length === 0) {
+    const commandStr = `${queueCommand}${disableRiotApi ? "" : " İsim#TAG"}`;
+    const descText = emptyQueueDescription
+      ? emptyQueueDescription.replace("{command}", commandStr)
+      : null;
+
     return (
       <div className="flex flex-col items-center justify-center py-10 text-center">
         <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-muted/50">
           <Shield className="h-6 w-6 text-muted-foreground/50" />
         </div>
         <h3 className="text-sm font-medium text-muted-foreground">
-          Sırada henüz kimse yok
+          {emptyQueueTitle || "Sırada henüz kimse yok"}
         </h3>
         <p className="mt-1 max-w-xs text-xs text-muted-foreground/70">
-          Kick sohbetinde{" "}
-          <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">
-            {queueCommand}
-            {disableRiotApi ? "" : " İsim#TAG"}
-          </code>{" "}
-          yazarak veya sağ tıklayarak sıraya katılabilirsiniz.
+          {descText ?? (
+            <>
+              Kick sohbetinde{" "}
+              <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">
+                {commandStr}
+              </code>{" "}
+              yazarak veya sağ tıklayarak sıraya katılabilirsiniz.
+            </>
+          )}
         </p>
       </div>
     );
@@ -174,7 +186,7 @@ export function QueueTable({
               <TableHead className="text-xs">Derece</TableHead>
               <TableHead className="text-xs text-center">Kazanma</TableHead>
               <TableHead className="w-14 text-xs text-center">Saat</TableHead>
-              <TableHead className="w-10" />
+              <TableHead className="w-24" />
             </TableRow>
           </TableHeader>
           <TableBody>

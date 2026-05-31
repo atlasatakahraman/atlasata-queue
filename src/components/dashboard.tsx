@@ -34,8 +34,11 @@ import { useQueue } from "@/hooks/use-queue";
 import { useSettings } from "@/hooks/use-settings";
 import { logger } from "@/lib/utils";
 import type { QueuePlayer } from "@/types";
+import { useGameTracker } from "@/hooks/use-game-tracker";
 import {
+  Crosshair,
   Dices,
+  History,
   ListOrdered,
   Shield,
   Shuffle,
@@ -55,9 +58,13 @@ import { Header } from "./header";
 import { ModerationActionDialog } from "./moderation-action-dialog";
 import { ModerationPanel } from "./moderation-panel";
 import { QueueTable } from "./queue-table";
-import { SettingsSheet } from "./settings-sheet";
+
 import { TeamDisplay } from "./team-display";
 import { Watermark } from "./watermark";
+const GameTrackerPanel = dynamic(
+  () => import("./game-tracker-panel").then((m) => m.GameTrackerPanel),
+  { ssr: false },
+);
 const SinglePickDialog = dynamic(
   () => import("./single-pick-dialog").then((m) => m.SinglePickDialog),
   { ssr: false },
@@ -71,7 +78,10 @@ const EditPlayerDialog = dynamic(
   { ssr: false },
 );
 
+import { useRouter } from "next/navigation";
+
 export function Dashboard() {
+  const router = useRouter();
   const { data: session, status } = useSession();
   const {
     settings,
@@ -81,6 +91,13 @@ export function Dashboard() {
   } = useSettings();
   const moderation = useModeration();
   const { showConfetti, showBadApple, dismissBadApple } = useEasterEggs();
+  const gameTracker = useGameTracker();
+
+  // Stable ref so handleTabChange / useEffect don't re-subscribe on every history update
+  const fetchRecentMatchesRef = useRef(gameTracker.fetchRecentMatches);
+  fetchRecentMatchesRef.current = gameTracker.fetchRecentMatches;
+  const trackedAccountRef = useRef(gameTracker.trackedAccount);
+  trackedAccountRef.current = gameTracker.trackedAccount;
 
   // Toast helper that respects the enableToasts setting
   const showToast = useCallback(
@@ -108,7 +125,7 @@ export function Dashboard() {
   });
 
   const queue = useQueue(liveStatus.isLive);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+
   const [singlePickOpen, setSinglePickOpen] = useState(false);
   const [clearConfirm, setClearConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState("queue");
@@ -118,7 +135,7 @@ export function Dashboard() {
 
   const handleTabChange = useCallback(
     (value: string) => {
-      const tabsOrder = ["queue", "teams", "moderation"];
+      const tabsOrder = ["queue", "teams", "tracker", "moderation"];
       const prevIndex = tabsOrder.indexOf(activeTab);
       const newIndex = tabsOrder.indexOf(value);
 
@@ -127,8 +144,12 @@ export function Dashboard() {
       }
       setActiveTab(value);
       localStorage.setItem("theatlas_active_tab", value);
+
+      if (value === "tracker" && trackedAccountRef.current) {
+        fetchRecentMatchesRef.current(true).catch(console.error);
+      }
     },
-    [activeTab],
+    [activeTab], // No longer depends on gameTracker object
   );
 
   const [queueFilter, setQueueFilter] = useState<
@@ -142,8 +163,14 @@ export function Dashboard() {
 
   useEffect(() => {
     const savedTab = localStorage.getItem("theatlas_active_tab");
-    if (savedTab && ["queue", "teams", "moderation"].includes(savedTab)) {
+    if (savedTab && ["queue", "teams", "tracker", "moderation"].includes(savedTab)) {
       setActiveTab(savedTab);
+      if (savedTab === "tracker" && trackedAccountRef.current) {
+        // Small delay so the component tree finishes mounting
+        setTimeout(() => {
+          fetchRecentMatchesRef.current(true).catch(console.error);
+        }, 100);
+      }
     }
 
     const savedQueueFilter = localStorage.getItem("theatlas_queue_filter");
@@ -153,7 +180,7 @@ export function Dashboard() {
     ) {
       setQueueFilter(savedQueueFilter as any);
     }
-  }, []);
+  }, []); // Runs once on mount — refs give us the latest values without a dep
 
   const isQueueIndicatorFirst = useRef(true);
   const [queueTabsList, setQueueTabsList] = useState<HTMLDivElement | null>(
@@ -348,7 +375,6 @@ export function Dashboard() {
           body: JSON.stringify({
             gameName: player.riotGameName,
             tagLine: player.riotTagLine,
-            apiKey: settings.riotApiKey,
             region: settings.riotRegion,
           }),
           signal: controller.signal,
@@ -379,7 +405,7 @@ export function Dashboard() {
         });
       }
     },
-    [settings.riotApiKey, settings.riotRegion, queue],
+    [settings.riotRegion, queue],
   );
 
   const handleDuplicateAttempt = useCallback(
@@ -855,7 +881,7 @@ export function Dashboard() {
     },
     onResolutionFail: () => {
       setResolutionError(true);
-      setSettingsOpen(true);
+      router.push("/settings");
       showToast("error", "Kick ID Bulunamadı", {
         description:
           "Kanal ID otomatik çözümlenemedi. Lütfen Manuel ID kısmını doldurun.",
@@ -980,7 +1006,7 @@ export function Dashboard() {
         onClearQueue={handleClearQueue}
         onRandomize={handleRandomize}
         onSinglePick={handleSinglePick}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={() => router.push("/settings")}
         onReconnect={kickChat.reconnect}
       >
         <div className="flex min-h-screen flex-col">
@@ -989,7 +1015,7 @@ export function Dashboard() {
             isLive={liveStatus.isLive}
             streamTitle={liveStatus.streamTitle}
             playerCount={queue.players.length}
-            onOpenSettings={() => setSettingsOpen(true)}
+            onOpenSettings={() => router.push("/settings")}
           />
 
           <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-4 sm:px-6">
@@ -999,10 +1025,10 @@ export function Dashboard() {
                   className="text-lg font-heading font-normal tracking-tight"
                   style={{ letterSpacing: "-0.02em" }}
                 >
-                  Şamata Sırası
+                  {settings.pageTitle || "Şamata Sırası"}
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  ARAM Mayhem 5v5 özel lobi yönetimi
+                  {settings.pageSubtitle || "ARAM Mayhem 5v5 özel lobi yönetimi"}
                 </p>
               </div>
 
@@ -1178,6 +1204,20 @@ export function Dashboard() {
                     )}
                   </TabsTrigger>
                   <TabsTrigger
+                    value="tracker"
+                    className="gap-2"
+                    id="tab-tracker"
+                  >
+                    <History className="h-3.5 w-3.5" />
+                    Maç Geçmişi
+                    {gameTracker.session?.state === "in_game" && (
+                      <span className="relative flex h-2 w-2">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+                      </span>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger
                     value="moderation"
                     className="gap-2"
                     id="tab-moderation"
@@ -1193,11 +1233,13 @@ export function Dashboard() {
                       <div className="flex items-center justify-between">
                         <div>
                           <CardTitle className="text-sm">
-                            Oyuncu Sırası
+                            {settings.queueCardTitle || "Oyuncu Sırası"}
                           </CardTitle>
                           <CardDescription className="text-xs">
                             {queue.players.length === 0
-                              ? `Kick sohbetinde "${settings.queueCommand}${settings.disableRiotApi ? "" : " İsim#TAG"}" yazarak katılın`
+                              ? (settings.queueCardDescription
+                                ? settings.queueCardDescription.replace("{command}", `${settings.queueCommand}${settings.disableRiotApi ? "" : " İsim#TAG"}`)
+                                : `Kick sohbetinde "${settings.queueCommand}${settings.disableRiotApi ? "" : " İsim#TAG"}" yazarak katılın`)
                               : `${queue.players.length} oyuncu sırada bekliyor`}
                           </CardDescription>
                         </div>
@@ -1258,7 +1300,7 @@ export function Dashboard() {
                         onClearQueue={handleClearQueue}
                         onRandomize={handleRandomize}
                         onSinglePick={handleSinglePick}
-                        onOpenSettings={() => setSettingsOpen(true)}
+                        onOpenSettings={() => router.push("/settings")}
                         onReconnect={kickChat.reconnect}
                         onManualAddRequest={() => setManualAddOpen(true)}
                       >
@@ -1281,6 +1323,8 @@ export function Dashboard() {
                             onEditPlayer={setEditingPlayer}
                             onModerate={handleModerateRequest}
                             moderation={moderation}
+                            emptyQueueTitle={settings.emptyQueueTitle}
+                            emptyQueueDescription={settings.emptyQueueDescription}
                           />
                         </div>
                       </GlobalContextMenu>
@@ -1345,7 +1389,7 @@ export function Dashboard() {
                         onClearQueue={handleClearQueue}
                         onRandomize={handleRandomize}
                         onSinglePick={handleSinglePick}
-                        onOpenSettings={() => setSettingsOpen(true)}
+                        onOpenSettings={() => router.push("/settings")}
                         onReconnect={kickChat.reconnect}
                       />
                     </div>
@@ -1366,6 +1410,50 @@ export function Dashboard() {
                       </CardContent>
                     </Card>
                   )}
+                </TabsContent>
+
+                <TabsContent value="tracker" className="mt-0">
+                  <GameTrackerPanel
+                    tracker={gameTracker}
+                    defaultRegion={settings.riotRegion}
+                    enableToasts={settings.enableToasts}
+                    onAddPlayerToQueue={(gameName, tagLine) => {
+                      const exists = queue.players.some(
+                        (p) =>
+                          p.riotGameName.toLowerCase() === gameName.toLowerCase() &&
+                          p.riotTagLine.toLowerCase() === tagLine.toLowerCase()
+                      );
+                      if (exists) {
+                        showToast("warning", "Zaten Sırada", {
+                          description: `${gameName}#${tagLine} zaten sırada bulunuyor.`,
+                        });
+                        return;
+                      }
+
+                      if (moderation.isPlayerBanned(gameName)) {
+                        showToast("error", "Yasaklı Oyuncu", {
+                          description: `${gameName} yasaklı olduğu için sıraya eklenemez.`,
+                        });
+                        return;
+                      }
+
+                      const newPlayer: QueuePlayer = {
+                        id: crypto.randomUUID(),
+                        kickUsername: gameName,
+                        riotGameName: gameName,
+                        riotTagLine: tagLine,
+                        isAway: false,
+                        isInGame: false,
+                        joinedAt: new Date(),
+                      };
+                      queue.addPlayer(newPlayer);
+                      showToast("success", "Sıraya Eklendi", {
+                        description: `${gameName}#${tagLine} sıraya eklendi.`,
+                      });
+                      fetchRiotData(newPlayer);
+                    }}
+                    onModeratePlayer={handleModerateRequest}
+                  />
                 </TabsContent>
 
                 <TabsContent value="moderation" className="mt-0">
@@ -1432,13 +1520,7 @@ export function Dashboard() {
 
           <Watermark />
 
-          <SettingsSheet
-            open={settingsOpen}
-            onOpenChange={setSettingsOpen}
-            settings={settings}
-            onUpdateSettings={updateSettings}
-            hasResolutionError={resolutionError}
-          />
+
 
           <SinglePickDialog
             open={singlePickOpen}

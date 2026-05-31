@@ -12,6 +12,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
   manualChatroomId: "",
   enableToasts: true,
   pickAnimationStyle: "classic",
+  pageTitle: "Şamata Sırası",
+  pageSubtitle: "ARAM Mayhem 5v5 özel lobi yönetimi",
+  emptyQueueTitle: "Sırada henüz kimse yok",
+  emptyQueueDescription: "Kick sohbetinde {command} yazarak veya sağ tıklayarak sıraya katılabilirsiniz.",
+  queueCardTitle: "Oyuncu Sırası",
+  queueCardDescription: "Kick sohbetinde \"{command}\" yazarak katılın",
 };
 
 export const KICK_WS_URL = "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=7.6.0&flash=false";

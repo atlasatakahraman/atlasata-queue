@@ -1,15 +1,14 @@
 import { NextRequest } from "next/server";
-import { fetchPlayerData } from "@/lib/riot/client";
+import { resolveRiotIdentity } from "@/lib/riot/client";
 import type { RiotRegion } from "@/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * POST /api/riot
- * Server-side proxy for Riot API calls so the API key never reaches the client.
- *
- * Body: { gameName, tagLine, apiKey?, region }
+ * POST /api/riot/resolve
+ * Resolve a Riot ID to PUUID + encrypted summoner ID.
+ * Body: { gameName, tagLine, region }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -17,7 +16,6 @@ export async function POST(request: NextRequest) {
     const { gameName, tagLine, region } = body as {
       gameName: string;
       tagLine: string;
-      apiKey?: string;
       region: RiotRegion;
     };
 
@@ -35,19 +33,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const data = await fetchPlayerData(gameName, tagLine, {
-      region,
-    });
+    const result = await resolveRiotIdentity(gameName, tagLine, region);
 
-    if (!data) {
+    if (!result) {
       return Response.json(
         { error: "Oyuncu bulunamadı" },
         { status: 404 },
       );
     }
 
-    return Response.json(data);
-  } catch {
+    return Response.json({
+      gameName: result.gameName,
+      tagLine: result.tagLine,
+      puuid: result.puuid,
+      encryptedSummonerId: result.encryptedSummonerId,
+      profileIconId: result.profileIconId,
+    });
+  } catch (error) {
+    console.error(`[API /resolve] Error:`, error);
     return Response.json(
       { error: "Riot API hatası" },
       { status: 500 },

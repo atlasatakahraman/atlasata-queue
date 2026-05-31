@@ -574,7 +574,7 @@ export function SinglePickDialog({
                     />
                   ) : null}
                   <AvatarFallback className="text-xl font-bold">
-                    {finalPick.riotGameName.charAt(0).toUpperCase()}
+                    {(finalPick.riotGameName || finalPick.kickUsername || "?").charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <WinnerBadge />
@@ -632,7 +632,7 @@ export function SinglePickDialog({
                         />
                       ) : null}
                       <AvatarFallback className="text-xs font-semibold">
-                        {player.riotGameName.charAt(0).toUpperCase()}
+                        {(player.riotGameName || player.kickUsername || "?").charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
@@ -679,7 +679,7 @@ export function SinglePickDialog({
                         />
                       ) : null}
                       <AvatarFallback className="text-xl font-bold">
-                        {currentDisplay.riotGameName.charAt(0).toUpperCase()}
+                        {(currentDisplay.riotGameName || currentDisplay.kickUsername || "?").charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     {finalPick && <WinnerBadge />}

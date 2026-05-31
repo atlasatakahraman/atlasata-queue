@@ -176,7 +176,7 @@ const SortableTeamPlayer = React.memo(function SortableTeamPlayer({
                 />
               ) : null}
               <AvatarFallback className="text-[10px]">
-                {player.riotGameName.charAt(0).toUpperCase()}
+                {(player.riotGameName || player.kickUsername || "?").charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
@@ -511,7 +511,7 @@ export function TeamDisplay({
                     />
                   ) : null}
                   <AvatarFallback className="text-[10px]">
-                    {activePlayer.riotGameName.charAt(0).toUpperCase()}
+                    {(activePlayer.riotGameName || activePlayer.kickUsername || "?").charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <p className="text-sm font-medium truncate">
