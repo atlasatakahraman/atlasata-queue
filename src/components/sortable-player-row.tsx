@@ -3,13 +3,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableCell, TableRow } from "@/components/ui/table";
 import {
@@ -23,16 +16,11 @@ import { TIER_LABELS } from "@/types";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  AlertTriangle,
   Clock,
-  Coffee,
   GripVertical,
-  MoreHorizontal,
-  Pencil,
-  Trash2,
-  UserCheck,
   UserMinus,
   UserPlus,
+  X,
 } from "lucide-react";
 import React from "react";
 import { PlayerCard } from "./player-card";
@@ -382,72 +370,23 @@ function SortablePlayerRowInner({
               </Tooltip>
             )}
 
-            {/* More actions dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+            {/* Remove from queue */}
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                  aria-label="Diğer işlemler"
-                >
-                  <MoreHorizontal className="h-3.5 w-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                {onEditPlayer && (
-                  <DropdownMenuItem
-                    className="cursor-pointer"
-                    onClick={() => onEditPlayer(player)}
-                  >
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Düzenle
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  onClick={() =>
-                    onUpdatePlayer(player.id, { isAway: !player.isAway })
-                  }
-                >
-                  {player.isAway ? (
-                    <>
-                      <UserCheck className="mr-2 h-4 w-4" />
-                      Geri Döndü
-                    </>
-                  ) : (
-                    <>
-                      <Coffee className="mr-2 h-4 w-4" />
-                      Uzakta İşaretle
-                    </>
-                  )}
-                </DropdownMenuItem>
-
-                {onModerate && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="cursor-pointer text-amber-600 focus:text-amber-600 focus:bg-amber-500/10"
-                      onClick={() =>
-                        onModerate(player.kickUsername, "warning")
-                      }
-                    >
-                      <AlertTriangle className="mr-2 h-4 w-4" />
-                      İşlem Uygula
-                    </DropdownMenuItem>
-                  </>
-                )}
-
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+                  className="h-6 w-6 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10"
                   onClick={() => onRemovePlayer(player.id)}
+                  aria-label="Sıradan Kaldır"
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Sıradan Kaldır
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">
+                Sıradan Kaldır
+              </TooltipContent>
+            </Tooltip>
           </div>
         </TableCell>
       </TableRow>

@@ -269,12 +269,34 @@ export function MatchResultCard({
                   Altın
                 </p>
               </div>
-              {match.damageDealt !== undefined && (
+              {(match.damageDealt !== undefined || match.damageTaken !== undefined || (match.healingDone !== undefined && match.healingDone > 0)) && (
                 <div className="text-center">
-                  <p className="text-sm font-bold text-orange-400 tabular-nums">
-                    {(match.damageDealt / 1000).toFixed(1)}k
-                  </p>
-                  <p className="text-[9px] text-orange-400/80 uppercase tracking-wider">
+                  <div className="text-sm font-bold tabular-nums flex items-center gap-0.5 justify-center">
+                    {match.damageDealt !== undefined ? (
+                      <span className="text-orange-400">
+                        {(match.damageDealt / 1000).toFixed(1)}k
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground/30">-</span>
+                    )}
+                    <span className="text-muted-foreground/30 font-normal">/</span>
+                    {match.healingDone !== undefined && match.healingDone > 0 ? (
+                      <span className="text-emerald-400">
+                        {(match.healingDone / 1000).toFixed(1)}k
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground/30">0k</span>
+                    )}
+                    <span className="text-muted-foreground/30 font-normal">/</span>
+                    {match.damageTaken !== undefined ? (
+                      <span className="text-red-400">
+                        {(match.damageTaken / 1000).toFixed(1)}k
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground/30">-</span>
+                    )}
+                  </div>
+                  <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-bold">
                     Hasar
                   </p>
                 </div>
@@ -373,14 +395,34 @@ export function MatchResultCard({
                                       {p.kills}/{p.deaths}/{p.assists}
                                     </span>
                                   </div>
-                                  {p.damageDealt !== undefined && (
-                                    <div className="flex flex-col items-end min-w-[36px]">
-                                      <span className="text-[8px] text-muted-foreground/50 uppercase font-bold tracking-wider leading-none mb-0.5">Hasar</span>
-                                      <span className="text-orange-400 font-semibold tabular-nums text-[11px] leading-tight">
-                                        {(p.damageDealt / 1000).toFixed(1)}k
-                                      </span>
+                                  <div className="flex flex-col items-end">
+                                    <span className="text-[8px] text-muted-foreground/50 uppercase font-bold tracking-wider leading-none mb-0.5">Hasar</span>
+                                    <div className="text-[11px] font-semibold tabular-nums leading-tight flex items-center gap-0.5">
+                                      {p.damageDealt !== undefined ? (
+                                        <span className="text-orange-400">
+                                          {(p.damageDealt / 1000).toFixed(1)}k
+                                        </span>
+                                      ) : (
+                                        <span className="text-muted-foreground/30">-</span>
+                                      )}
+                                      <span className="text-[9px] text-muted-foreground/35 font-normal">/</span>
+                                      {p.healingDone !== undefined && p.healingDone > 0 ? (
+                                        <span className="text-emerald-400">
+                                          {(p.healingDone / 1000).toFixed(1)}k
+                                        </span>
+                                      ) : (
+                                        <span className="text-muted-foreground/30">0k</span>
+                                      )}
+                                      <span className="text-[9px] text-muted-foreground/35 font-normal">/</span>
+                                      {p.damageTaken !== undefined ? (
+                                        <span className="text-red-400">
+                                          {(p.damageTaken / 1000).toFixed(1)}k
+                                        </span>
+                                      ) : (
+                                        <span className="text-muted-foreground/30">-</span>
+                                      )}
                                     </div>
-                                  )}
+                                  </div>
                                 </div>
                               </div>
                             </ContextMenuTrigger>
@@ -507,14 +549,34 @@ export function MatchResultCard({
                                   {p.kills}/{p.deaths}/{p.assists}
                                 </span>
                               </div>
-                              {p.damageDealt !== undefined && (
-                                <div className="flex flex-col items-end min-w-[36px]">
-                                  <span className="text-[8px] text-muted-foreground/50 uppercase font-bold tracking-wider leading-none mb-0.5">Hasar</span>
-                                  <span className="text-orange-400 font-semibold tabular-nums text-[11px] leading-tight">
-                                    {(p.damageDealt / 1000).toFixed(1)}k
-                                  </span>
+                              <div className="flex flex-col items-end">
+                                <span className="text-[8px] text-muted-foreground/50 uppercase font-bold tracking-wider leading-none mb-0.5">Hasar</span>
+                                <div className="text-[11px] font-semibold tabular-nums leading-tight flex items-center gap-0.5">
+                                  {p.damageDealt !== undefined ? (
+                                    <span className="text-orange-400">
+                                      {(p.damageDealt / 1000).toFixed(1)}k
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground/30">-</span>
+                                  )}
+                                  <span className="text-[9px] text-muted-foreground/35 font-normal">/</span>
+                                  {p.healingDone !== undefined && p.healingDone > 0 ? (
+                                    <span className="text-emerald-400">
+                                      {(p.healingDone / 1000).toFixed(1)}k
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground/30">0k</span>
+                                  )}
+                                  <span className="text-[9px] text-muted-foreground/35 font-normal">/</span>
+                                  {p.damageTaken !== undefined ? (
+                                    <span className="text-red-400">
+                                      {(p.damageTaken / 1000).toFixed(1)}k
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground/30">-</span>
+                                  )}
                                 </div>
-                              )}
+                              </div>
                             </div>
                           </div>
                         </ContextMenuTrigger>
@@ -637,14 +699,34 @@ export function MatchResultCard({
                                   {p.kills}/{p.deaths}/{p.assists}
                                 </span>
                               </div>
-                              {p.damageDealt !== undefined && (
-                                <div className="flex flex-col items-end min-w-[36px]">
-                                  <span className="text-[8px] text-muted-foreground/50 uppercase font-bold tracking-wider leading-none mb-0.5">Hasar</span>
-                                  <span className="text-orange-400 font-semibold tabular-nums text-[11px] leading-tight">
-                                    {(p.damageDealt / 1000).toFixed(1)}k
-                                  </span>
+                              <div className="flex flex-col items-end">
+                                <span className="text-[8px] text-muted-foreground/50 uppercase font-bold tracking-wider leading-none mb-0.5">Hasar</span>
+                                <div className="text-[11px] font-semibold tabular-nums leading-tight flex items-center gap-0.5">
+                                  {p.damageDealt !== undefined ? (
+                                    <span className="text-orange-400">
+                                      {(p.damageDealt / 1000).toFixed(1)}k
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground/30">-</span>
+                                  )}
+                                  <span className="text-[9px] text-muted-foreground/35 font-normal">/</span>
+                                  {p.healingDone !== undefined && p.healingDone > 0 ? (
+                                    <span className="text-emerald-400">
+                                      {(p.healingDone / 1000).toFixed(1)}k
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground/30">0k</span>
+                                  )}
+                                  <span className="text-[9px] text-muted-foreground/35 font-normal">/</span>
+                                  {p.damageTaken !== undefined ? (
+                                    <span className="text-red-400">
+                                      {(p.damageTaken / 1000).toFixed(1)}k
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground/30">-</span>
+                                  )}
                                 </div>
-                              )}
+                              </div>
                             </div>
                           </div>
                         </ContextMenuTrigger>

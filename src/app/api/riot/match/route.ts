@@ -84,6 +84,8 @@ export async function POST(request: NextRequest) {
             assists: p.assists,
             teamId: p.teamId,
             damageDealt: p.totalDamageDealtToChampions,
+            healingDone: p.totalHeal,
+            damageTaken: p.totalDamageTaken,
             win: p.win,
           };
         }),
@@ -109,6 +111,8 @@ export async function POST(request: NextRequest) {
       visionScore: trackedPlayer.visionScore,
       goldEarned: trackedPlayer.goldEarned,
       damageDealt: trackedPlayer.totalDamageDealtToChampions,
+      healingDone: trackedPlayer.totalHeal,
+      damageTaken: trackedPlayer.totalDamageTaken,
       teams,
       savedAt: new Date().toISOString(),
     };

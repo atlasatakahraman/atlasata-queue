@@ -1418,14 +1418,24 @@ export function Dashboard() {
                     defaultRegion={settings.riotRegion}
                     enableToasts={settings.enableToasts}
                     onAddPlayerToQueue={(gameName, tagLine) => {
-                      const exists = queue.players.some(
-                        (p) =>
-                          p.riotGameName.toLowerCase() === gameName.toLowerCase() &&
-                          p.riotTagLine.toLowerCase() === tagLine.toLowerCase()
-                      );
+                      const riotDisabled = !!settings.disableRiotApi;
+
+                      const exists = riotDisabled
+                        ? queue.players.some(
+                            (p) =>
+                              p.kickUsername.toLowerCase() === gameName.toLowerCase()
+                          )
+                        : queue.players.some(
+                            (p) =>
+                              p.riotGameName.toLowerCase() === gameName.toLowerCase() &&
+                              p.riotTagLine.toLowerCase() === tagLine.toLowerCase()
+                          );
+
                       if (exists) {
                         showToast("warning", "Zaten Sırada", {
-                          description: `${gameName}#${tagLine} zaten sırada bulunuyor.`,
+                          description: riotDisabled
+                            ? `${gameName} zaten sırada bulunuyor.`
+                            : `${gameName}#${tagLine} zaten sırada bulunuyor.`,
                         });
                         return;
                       }
@@ -1437,20 +1447,28 @@ export function Dashboard() {
                         return;
                       }
 
+                      const effectiveTagLine = riotDisabled ? "MAÇ" : tagLine;
+
                       const newPlayer: QueuePlayer = {
                         id: crypto.randomUUID(),
                         kickUsername: gameName,
                         riotGameName: gameName,
-                        riotTagLine: tagLine,
+                        riotTagLine: effectiveTagLine,
                         isAway: false,
                         isInGame: false,
                         joinedAt: new Date(),
+                        isLoading: !riotDisabled,
                       };
                       queue.addPlayer(newPlayer);
                       showToast("success", "Sıraya Eklendi", {
-                        description: `${gameName}#${tagLine} sıraya eklendi.`,
+                        description: riotDisabled
+                          ? `${gameName} sıraya eklendi.`
+                          : `${gameName}#${tagLine} sıraya eklendi.`,
                       });
-                      fetchRiotData(newPlayer);
+
+                      if (!riotDisabled) {
+                        fetchRiotData(newPlayer);
+                      }
                     }}
                     onModeratePlayer={handleModerateRequest}
                   />

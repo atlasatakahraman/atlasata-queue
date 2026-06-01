@@ -210,10 +210,35 @@ export function useGameTracker(): UseGameTrackerReturn {
 
         setIsResolving(false);
 
-        // Fetch immediately — small delay so the state update propagates first
+        // Fetch match history immediately
         setTimeout(() => {
           fetchRecentMatches(false, account).catch(console.error);
         }, 50);
+
+        // Fetch rank data in the background (non-blocking)
+        fetch("/api/riot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            gameName: data.gameName,
+            tagLine: data.tagLine,
+            region,
+          }),
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((rankData) => {
+            if (rankData?.rankedTier) {
+              const updated: TrackedRiotAccount = {
+                ...account,
+                rankedTier: rankData.rankedTier,
+                rankedDivision: rankData.rankedDivision,
+                winRate: rankData.winRate,
+              };
+              setTrackedAccount(updated);
+              setTrackedAccountState(updated);
+            }
+          })
+          .catch(() => {});
 
         return true;
       } catch {

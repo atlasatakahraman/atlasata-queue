@@ -1,5 +1,6 @@
 "use client";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,11 +18,28 @@ import {
 import type { UseGameTrackerReturn } from "@/hooks/use-game-tracker";
 import { PROFILE_ICON_URL } from "@/lib/constants";
 import type { RiotRegion } from "@/types";
+import { TIER_LABELS } from "@/types";
 import { Download, Loader2, PowerOff, Search } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { MatchHistory } from "./match-history";
 import { MatchResultCard } from "./match-result";
+
+function getRankColorClass(tier?: string): string {
+  const colors: Record<string, string> = {
+    IRON: "bg-rank-iron/15 text-rank-iron border-rank-iron/30",
+    BRONZE: "bg-rank-bronze/15 text-rank-bronze border-rank-bronze/30",
+    SILVER: "bg-rank-silver/15 text-rank-silver border-rank-silver/30",
+    GOLD: "bg-rank-gold/15 text-rank-gold border-rank-gold/30",
+    PLATINUM: "bg-rank-platinum/15 text-rank-platinum border-rank-platinum/30",
+    EMERALD: "bg-rank-emerald/15 text-rank-emerald border-rank-emerald/30",
+    DIAMOND: "bg-rank-diamond/15 text-rank-diamond border-rank-diamond/30",
+    MASTER: "bg-rank-master/15 text-rank-master border-rank-master/30",
+    GRANDMASTER: "bg-rank-grandmaster/15 text-rank-grandmaster border-rank-grandmaster/30",
+    CHALLENGER: "bg-rank-challenger/15 text-rank-challenger border-rank-challenger/30",
+  };
+  return colors[tier ?? ""] ?? "";
+}
 
 const REGION_SHORT_CODES: Record<string, string> = {
   tr1: "TR",
@@ -197,10 +215,28 @@ export function GameTrackerPanel({
                       #{tracker.trackedAccount.tagLine}
                     </span>
                   </p>
-                  <p className="text-[10px] text-muted-foreground leading-none mt-1 font-semibold">
-                    {REGION_SHORT_CODES[tracker.trackedAccount.region] ??
-                      tracker.trackedAccount.region.toUpperCase()}
-                  </p>
+                  <div className="flex items-center justify-between gap-1.5 mt-1">
+                    <p className="text-[10px] text-muted-foreground leading-none font-semibold">
+                      {REGION_SHORT_CODES[tracker.trackedAccount.region] ??
+                        tracker.trackedAccount.region.toUpperCase()}
+                    </p>
+                    {tracker.trackedAccount.rankedTier &&
+                      tracker.trackedAccount.rankedTier !== "UNRANKED" && (
+                        <Badge
+                          variant="outline"
+                          className={`text-[9px] font-medium h-4 px-1.5 py-0 ${getRankColorClass(
+                            tracker.trackedAccount.rankedTier,
+                          )}`}
+                        >
+                          {TIER_LABELS[tracker.trackedAccount.rankedTier as keyof typeof TIER_LABELS]}
+                          {!["MASTER", "GRANDMASTER", "CHALLENGER"].includes(
+                            tracker.trackedAccount.rankedTier,
+                          ) &&
+                            tracker.trackedAccount.rankedDivision &&
+                            ` ${tracker.trackedAccount.rankedDivision}`}
+                        </Badge>
+                      )}
+                  </div>
                 </div>
               </div>
 

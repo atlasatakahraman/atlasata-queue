@@ -9,6 +9,9 @@ export interface TrackedRiotAccount {
   region: RiotRegion;
   routingRegion: RiotRoutingRegion;
   profileIconId?: number;
+  rankedTier?: string;
+  rankedDivision?: string;
+  winRate?: number;
   resolvedAt: string;
 }
 
@@ -72,6 +75,8 @@ export interface MatchResult {
   visionScore: number;
   goldEarned: number;
   damageDealt?: number;
+  healingDone?: number;
+  damageTaken?: number;
   teams: MatchTeamSummary[];
   savedAt: string;
 }
@@ -93,6 +98,8 @@ export interface MatchPlayerSummary {
   assists: number;
   teamId: number;
   damageDealt?: number;
+  healingDone?: number;
+  damageTaken?: number;
   win: boolean;
 }
 
@@ -152,6 +159,8 @@ export interface RiotMatchParticipant {
   win: boolean;
   teamId: number;
   totalDamageDealtToChampions: number;
+  totalHeal: number;
+  totalDamageTaken: number;
 }
 
 export interface RiotMatchTeam {

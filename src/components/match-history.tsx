@@ -160,11 +160,32 @@ function MatchHistoryRow({ match, onClick }: MatchHistoryRowProps) {
           <span className="tabular-nums font-medium">{kda} KDA</span>
           <span className="opacity-50">·</span>
           <span className="tabular-nums font-medium">{match.cs} CS</span>
-          {match.damageDealt !== undefined && (
+          {(match.damageDealt !== undefined || match.damageTaken !== undefined || (match.healingDone !== undefined && match.healingDone > 0)) && (
             <>
               <span className="opacity-50">·</span>
-              <span className="tabular-nums font-bold text-orange-400/90">
-                {(match.damageDealt / 1000).toFixed(1)}k Hasar
+              <span className="tabular-nums font-medium text-muted-foreground flex items-center gap-0.5">
+                {match.damageDealt !== undefined && (
+                  <span className="font-bold text-orange-400/90">
+                    {(match.damageDealt / 1000).toFixed(1)}k
+                  </span>
+                )}
+                {match.healingDone !== undefined && match.healingDone > 0 && (
+                  <>
+                    <span className="text-[9px] opacity-40 font-normal">/</span>
+                    <span className="font-bold text-emerald-500/90">
+                      {(match.healingDone / 1000).toFixed(1)}k
+                    </span>
+                  </>
+                )}
+                {match.damageTaken !== undefined && (
+                  <>
+                    <span className="text-[9px] opacity-40 font-normal">/</span>
+                    <span className="font-bold text-red-500/90">
+                      {(match.damageTaken / 1000).toFixed(1)}k
+                    </span>
+                  </>
+                )}
+                <span className="ml-1 text-[9px] uppercase font-bold tracking-wider text-muted-foreground/70">Hasar</span>
               </span>
             </>
           )}
